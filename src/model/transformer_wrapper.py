@@ -18,24 +18,36 @@ class TransformerWrapper(nn.Module):
         # Position encoding.
         self.position_encoding = PositionalEncoding(config)
 
+        # Down-projection to transformer dim.
+        self.linear_proj = nn.Linear(
+            in_features=config.dim_extractor,
+            out_features=config.dim_transformer,
+        )
+        self.linear_proj_drop = nn.Dropout(config.dropout)
+
         # Transformer encoder.
         encoder_layer = nn.TransformerEncoderLayer(
-            d_model=config.dim_extractor,
-            dim_feedforward=config.dim_extractor,
-            nhead=1,
+            d_model=config.dim_transformer,
+            dim_feedforward=config.dim_transformer*2,
+            nhead=config.nhead_transformer,
             batch_first=True,
+            dropout=config.dropout,
         )
         self.transformer_encoder = nn.TransformerEncoder(
             encoder_layer=encoder_layer,
-            num_layers=2,
+            num_layers=config.nlayers_transformer,
         )
-        self.dropout = nn.Dropout(0.1)
+        self.dropout = nn.Dropout(config.dropout)
 
     def forward(self, x: Tensor, mask: Tensor = None) -> Tensor:
 
         # Normalization.
         # Transform from (N, L, C) to (N, C, L) and back.
         x = self.norm(x.permute((0, 2, 1))).permute((0, 2, 1))
+
+        # Linear projection down to transformer dim.
+        x = self.linear_proj(x)
+        x = self.linear_proj_drop(x)
 
         # Position encoding + transformer.
         x = self.position_encoding(x)
@@ -51,7 +63,7 @@ class PositionalEncoding(nn.Module):
     def __init__(self, config: Config):
         super().__init__()
 
-        d_model: int = config.dim_extractor
+        d_model: int = config.dim_transformer
         seq_len: int = config.feat_seq_len
 
         position = torch.arange(seq_len).unsqueeze(1)

@@ -116,3 +116,38 @@ Tamm, B., Balabin, H., Vandenberghe, R., Van hamme, H. (2022) Pre-trained Speech
   doi={10.21437/Interspeech.2022-10147}
 }
 ```
+
+
+
+
+
+
+
+
+## HERE'S THE PLAN
+1 layer output over the entire dataset is roughly 324 GB
+for the largest model
+ - x2 for larger hidden (1980 instead of 1024)
+==> 324 GB * 2 * 48 layers = 31 TB data stored!!!
+Not feasible for anyone, and caching saves 49x resources since 50 epochs
+New plan:
+- Only use 50% of dataset ==> large model over 50% dataset = 324 GB per layer
+- Only train 7 layers at time ==> 7*324GB = 2268 GB which is feasible
+- Train ALL models that use this XLS-R as the base (6 BLSTM + 3 transformers) in
+  parallel using CUDA streams
+- Also, train full set and then subset to re-use saved features from same layer
+  I.E.:
+  - 300M  0:7  full:
+      1. extract features
+      2. train 7x9 regression heads in parallel
+  - 300M  0:7  subset:
+      1.  (features already extracted)
+      2. train 7x9 regression heads in parallel
+  - 300M  7:14 full:
+  - 300M  7:14 subset:
+  - ...
+  - 300M 21:25 full:
+  - 300M 21:25 subset:
+  -  1B   0:7  full:
+  -  1B   0:7  subset:
+  - ...

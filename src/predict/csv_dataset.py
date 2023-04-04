@@ -111,9 +111,6 @@ class CsvDataset(Dataset):
         # Type to CSV column.
         types = {
             'audio': STANDARDIZED_CSV_INFO.col_audio_path,  # 1st column
-            'mfcc': STANDARDIZED_CSV_INFO.col_mfcc_path,  # 2nd column
-            'mfcc_ext': STANDARDIZED_CSV_INFO.col_mfcc_ext_path,  # 3rd column
-            'xlsr': STANDARDIZED_CSV_INFO.col_xlsr_path,  # 4th column
         }
         col_path = types[config.input.name.lower()]
 

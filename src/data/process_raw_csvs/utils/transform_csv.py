@@ -22,7 +22,7 @@ def transform_csv(in_path: Path, out_dir: Path, csv_info: CsvInfo):
     if not in_path.exists():
         raise Exception("Path does not exist: %s" % str(in_path))
 
-    # Calculate relative path from DIR_PROJECT to in_dir/out_dir.
+    # Calculate relative path from DIR_PROJECT to in_dir.
     in_dir_rel_path = os.path.relpath(in_dir, constants.DIR_PROJECT)
     out_dir_rel_path = os.path.relpath(out_dir, constants.DIR_PROJECT)
 
@@ -70,15 +70,13 @@ def transform_csv(in_path: Path, out_dir: Path, csv_info: CsvInfo):
             audio_path = os.path.relpath(audio_path)  # resolve path
             out_row.append(audio_path)
 
-            # 1.2. Other feature paths:
+            # 1.2. XLS-R feature paths:
             #      These files will eventually be saved in the "processed"
             #      directory (out_dir).
-            other_features = ["mfcc", "mfcc_ext", "xlsr"]
-            for name in other_features:
-                feat_path = audio_base + f".{name}.pt"
-                feat_path = os.path.join(out_dir_rel_path, feat_path)
-                feat_path = os.path.relpath(feat_path)  # resolve path
-                out_row.append(feat_path)
+            feat_path = audio_base + f".xlsr.pt"
+            feat_path = os.path.join(out_dir_rel_path, feat_path)
+            feat_path = os.path.relpath(feat_path)  # resolve path
+            out_row.append(feat_path)
 
             # 2. Labels.
 

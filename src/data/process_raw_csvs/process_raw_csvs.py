@@ -9,10 +9,12 @@ from src.utils.split import Split, ALL_SPLITS, DEV_SPLITS
 
 
 
-def _process_raw_csvs(split: Split, example: bool = False):
+def _process_raw_csvs(split: Split, example: bool = False, use_35: bool = False):
+    if example:
+        use_35 = False
 
     # Returns a constants.DatasetDir containing information about the dataset.
-    dataset = constants.get_dataset(split, example)
+    dataset = constants.get_dataset(split, example, use_35)
 
     # Select appropriate CSV infos.
     if split in [Split.TRAIN, Split.TRAIN_SUBSET, Split.VAL, Split.VAL_SUBSET]:
@@ -25,19 +27,27 @@ def _process_raw_csvs(split: Split, example: bool = False):
     # Print split name.
     split_name = str(split).lower().split(".")[1]
     example_str = "(example) " if example else ""
-    print(f"{example_str}Processing raw CSVs for split: {split_name}.")
+    use_35_str = "(35%) " if use_35 else ""
+    prefix_str = f"{example_str}{use_35_str}"
+    print(f"{prefix_str}Processing raw CSVs for split: {split_name}.")
 
     # Load all CSVs.
     rows = []
     for csv_info in csv_infos:
         csv_path = csv_info.csv_path
-        if split == Split.VAL_SUBSET:
-            out_dir = constants.get_dataset(Split.VAL, example).features_dir
-        elif split == Split.TRAIN_SUBSET:
-            out_dir = constants.get_dataset(Split.TRAIN, example).features_dir
+
+        # Always save features in main TRAIN/VAL features dir.
+        if split == Split.TRAIN_SUBSET:
+            _split = Split.TRAIN
+        elif split == Split.VAL_SUBSET:
+            _split = Split.VAL
         else:
-            out_dir = dataset.features_dir
-        print(f"{example_str}Processing raw CSV: {csv_path}")
+            _split = split
+        _example = False
+        _use_35 = False
+        out_dir = constants.get_dataset(_split, _example, _use_35).features_dir
+
+        print(f"{prefix_str}Processing raw CSV: {csv_path}")
         new_rows = transform_csv(
             in_path=csv_path,
             out_dir=out_dir,
@@ -55,6 +65,16 @@ def _process_raw_csvs(split: Split, example: bool = False):
 
         # Calculate fraction of rows to keep for example.
         frac_to_keep = 1 / 300  # 1 GB of 300 GB
+
+        # Create example CSV by shuffling rows and keeping top X %.
+        rows_to_keep = math.ceil(frac_to_keep * len(rows))
+        assert rows_to_keep > 0 and rows_to_keep <= len(rows)
+        rows = rows[:rows_to_keep]
+
+    elif use_35:
+
+        # Keep 35%
+        frac_to_keep = 0.35
 
         # Create example CSV by shuffling rows and keeping top X %.
         rows_to_keep = math.ceil(frac_to_keep * len(rows))
@@ -82,27 +102,33 @@ def _process_raw_csvs(split: Split, example: bool = False):
         csv_writer = csv.writer(f_out)
         csv_writer.writerows(rows)
 
-    print(f"{example_str}Finished.")
+    print(f"{prefix_str}Finished.")
 
 
-def process_raw_csvs(split: Split, example: bool):
+def process_raw_csvs(split: Split, example: bool = False, use_35: bool = False):
+    if example:
+        use_35 = False
 
     # Flag name. Make sure this operation is only performed once.
     split_name = str(split).lower().split(".")[1]
     example_name = "_example" if example else ""
     example_str = "(example) " if example else ""
-    flag_name = f"processed_csv_{split_name}{example_name}"
+    use_35_name = "_use_35" if use_35 else ""
+    use_35_str = "(35%) " if use_35 else ""
+    prefix_str = f"{example_str}{use_35_str}"
+    flag_name = f"processed_csv_{split_name}{example_name}{use_35_name}"
 
     # Run exactly once.
     with run_once(flag_name) as should_run:
         if should_run:
-            _process_raw_csvs(split, example)
+            _process_raw_csvs(split, example, use_35)
         else:
-            print(f"{example_str}Raw CSVs already processed for {split_name} split.")
+            print(f"{prefix_str}Raw CSVs already processed for {split_name} split.")
 
 
 if __name__ == "__main__":
-    example: bool = True
     for split in DEV_SPLITS:
-        for example in [True, False]:
-            process_raw_csvs(split, example)
+        process_raw_csvs(split, example=False, use_35=False)
+        process_raw_csvs(split, example=True, use_35=False)
+        process_raw_csvs(split, example=False, use_35=True)
+        

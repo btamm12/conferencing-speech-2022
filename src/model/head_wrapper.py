@@ -41,7 +41,7 @@ class PoolAttFF(torch.nn.Module):
         self.linear3 = nn.Linear(config.dim_head_in, 1)
         
         self.activation = F.relu
-        self.dropout = nn.Dropout(0.1)
+        self.dropout = nn.Dropout(config.dropout)
         
     def forward(self, x: Tensor):
 

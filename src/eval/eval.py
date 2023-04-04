@@ -3,6 +3,7 @@
 yimingxiao
 """
 import numpy as np
+import os
 from scipy import stats
 import pandas as pd
 from sklearn.metrics import mean_squared_error
@@ -15,9 +16,11 @@ def _eval(csv):
     pccs = np.corrcoef(mos, mos_pred)[0][1]
     rmse = np.sqrt(mean_squared_error(mos, mos_pred))
     SROCC = stats.spearmanr(mos_pred, mos)[0]
-    print("PCC:  " + str(round(pccs,4)))
-    print("SRCC: " + str(round(SROCC,4)))
-    print("RMSE: " + str(round(rmse,4)))
+    _name = os.path.splitext(os.path.basename(csv))[0][15:]
+    print(_name + "," + str(round(rmse,4)))
+    # print("PCC:  " + str(round(pccs,4)))
+    # print("SRCC: " + str(round(SROCC,4)))
+    # print("RMSE: " + str(round(rmse,4)))
 
 def eval():
     from pathlib import Path
@@ -27,9 +30,9 @@ def eval():
     for subdir in in_dir.iterdir():
         paths = list(subdir.iterdir())
         for csv_path in sorted(paths):
-            print(f"Processing {csv_path}")
+            # print(f"Processing {csv_path}")
             _eval(str(csv_path))
-            print("============================")
+            # print("============================")
 
 if __name__ == "__main__":
     eval()

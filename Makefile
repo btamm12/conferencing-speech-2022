@@ -1,4 +1,4 @@
-.PHONY: clean download eval eval_example example_zip features features_example lint requirements predict predict_example predict_submission shards shards_example test_environment train train_example
+.PHONY: clean download eval eval_example example_zip lint requirements predict predict_example predict_submission test_environment train train_example
 
 #################################################################################
 # GLOBALS                                                                       #
@@ -37,40 +37,16 @@ requirements: test_environment
 download: requirements
 	$(PYTHON_INTERPRETER) src/data/make_download.py
 
-## Make Features
-features: download
-	$(PYTHON_INTERPRETER) src/data/make_features.py
-
-## Make Features (example)
-features_example: download
-	$(PYTHON_INTERPRETER) src/data/make_features.py --example
-
 ## Make Example ZIP
 example_zip: features_example
 	$(PYTHON_INTERPRETER) src/data/make_example_zip.py
 
-## Make Shards
-shards: features
-	$(PYTHON_INTERPRETER) src/data/make_shards.py
-
-## Make Shards (example)
-shards_example: features_example
-	$(PYTHON_INTERPRETER) src/data/make_shards.py --example
-
-## Make Norm
-norm: features
-	$(PYTHON_INTERPRETER) src/data/make_norm.py
-
-## Make Norm (example)
-norm_example: features_example
-	$(PYTHON_INTERPRETER) src/data/make_norm.py --example
-
 ## Do training
-train: shards
+train: download
 	$(PYTHON_INTERPRETER) src/train/make_train.py
 
 ## Do training with example data
-train_example: shards_example
+train_example: download
 	$(PYTHON_INTERPRETER) src/train/make_train.py --example
 
 ## Do prediction

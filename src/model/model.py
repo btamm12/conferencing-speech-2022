@@ -4,6 +4,7 @@ from torch import nn, Tensor
 from torch.nn import functional as F
 
 from src.model.config import Config, Extractor, Transformer, Head
+from src.model.config import TRAIN_ARGS
 from src.model.blstm_wrapper import BlstmWrapper
 from src.model.head_wrapper import HeadWrapper
 from src.model.transformer_wrapper import TransformerWrapper
@@ -54,12 +55,12 @@ class Model(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(
             params=self.parameters(),
-            lr=self.config.train_config.base_lr,
+            lr=TRAIN_ARGS.base_lr,
         )
         lr_scheduler = torch.optim.lr_scheduler.CyclicLR(
             optimizer=optimizer,
-            base_lr=self.config.train_config.base_lr,
-            max_lr=self.config.train_config.max_lr,
+            base_lr=TRAIN_ARGS.base_lr,
+            max_lr=TRAIN_ARGS.max_lr,
             cycle_momentum=False,
         )
         return {"optimizer": optimizer, "lr_scheduler": lr_scheduler, }

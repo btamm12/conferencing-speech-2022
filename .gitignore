@@ -91,6 +91,7 @@ gdrive_cred.json
 # data
 # exclude data from source control by default
 /data
+/data-ssd
 /data_example/
 /data_example.zip
 
@@ -100,3 +101,6 @@ lightning_logs/
 
 # venv
 venv/
+
+/*.wav
+scratch

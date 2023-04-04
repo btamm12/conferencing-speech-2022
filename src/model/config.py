@@ -1,18 +1,7 @@
 from enum import Enum
-from typing import List
+from typing import Dict, List
 
-
-class Input(Enum):
-    AUDIO = 0
-    MFCC = 1
-    MFCC_EXT = 2
-    XLSR = 3
-
-
-class Extractor(Enum):
-    NONE = 0
-    XLSR = 1
-
+from src import constants
 
 class Transformer(Enum):
     NONE = 0
@@ -28,6 +17,7 @@ class TrainConfig():
 
     max_epochs: int = None
     batch_size: int = None
+    grad_accum: int = None
     base_lr: float = None
     max_lr: float = None
 
@@ -37,26 +27,28 @@ class TrainConfig():
         batch_size: int,
         base_lr: float,
         max_lr: float,
+        grad_accum: int = 1,
     ) -> None:
         assert max_epochs > 0
         assert batch_size > 0
         assert base_lr > 0
         assert max_lr > 0
+        assert grad_accum > 0
 
         self.max_epochs = max_epochs
         self.batch_size = batch_size
         self.base_lr = base_lr
         self.max_lr = max_lr
+        self.grad_accum = grad_accum
 
 
 class Config():
 
     name: str = None
-    input: Input = None
-    extractor: Extractor = None
     transformer: Transformer = None
+    down_proj: bool = None
     head: Head = None
-    train_config: TrainConfig = None
+    xlsr_layers: int = None
 
     # Dimensions.
     feat_seq_len: int = None
@@ -69,22 +61,17 @@ class Config():
     def __init__(
         self,
         name: str,
-        input: Input,
-        extractor: Extractor,
         transformer: Transformer,
         head: Head,
         feat_seq_len: int,
         dim_transformer: int = None,
-        train_config: TrainConfig = None,
+        xlsr_name: str = "wav2vec2-xls-r-300m",
+        down_proj: bool = True,
+        nhead_transformer: int = 4,
+        nlayers_transformer: int = 2,
     ):
 
         # Check valid parameters.
-        if extractor == Extractor.NONE:
-            msg = "Extractor NONE is not supported for Input AUDIO."
-            assert input != Input.AUDIO, msg
-        if extractor == Extractor.XLSR:
-            msg = "Extractor XLSR must be used with Input AUDIO."
-            assert input == Input.AUDIO, msg
         if transformer == Transformer.BLSTM:
             msg = "Must specify dim_transformer."
             assert dim_transformer is not None, msg
@@ -93,41 +80,49 @@ class Config():
         msg = "feat_seq_len must be positive."
         assert feat_seq_len > 0, msg
 
+        # Check XLS-R name
+        msg = f"xlsr_name must be in {constants.XLSR_NAMES}"
+        assert xlsr_name in constants.XLSR_NAMES, msg
+
         # Save parameters.
         self.name = name
-        self.input = input
-        self.extractor = extractor
         self.transformer = transformer
         self.head = head
         self.feat_seq_len = feat_seq_len
         self.dim_transformer = dim_transformer
-        self.train_config = train_config
+        self.down_proj = down_proj
+        self.xlsr_name = xlsr_name
+        self.nhead_transformer = nhead_transformer
+        self.nlayers_transformer = nlayers_transformer
+
+        # From XLS-R paper Table 2: Model architectures. 
+        # +1 since we output B hidden layers and the final embedding
+        if xlsr_name == "wav2vec2-xls-r-300m":
+            _b = 24
+        elif xlsr_name == "wav2vec2-xls-r-1b":
+            _b = 48
+        elif xlsr_name == "wav2vec2-xls-r-2b":
+            _b = 48
+        self.xlsr_layers = _b + 1
 
         # Set model parameters.
-        if input == Input.AUDIO:
-            self.dim_input = 1
-        elif input == Input.MFCC:
-            self.dim_input = 40
-        elif input == Input.MFCC_EXT:
-            self.dim_input = 120
-        elif input == Input.XLSR:
-            self.dim_input = 1024
+        # From XLS-R paper Table 2: Model architectures.
+        if self.xlsr_name == "wav2vec2-xls-r-2b":
+            _h = 1920
+        elif self.xlsr_name == "wav2vec2-xls-r-1b": # 1280 apparently...
+            _h = 1280
         else:
-            raise Exception("Unknown input.")
+            _h = 1024
+        self.dim_input = _h
 
-        if extractor == Extractor.NONE:
-            self.dim_extractor = self.dim_input
-        elif extractor == Extractor.XLSR:
-            self.dim_extractor = 1024
-        else:
-            raise Exception("Unknown extractor.")
+        self.dim_extractor = self.dim_input
 
         if transformer == Transformer.NONE:
             self.dim_transformer = self.dim_extractor
         elif transformer == Transformer.BLSTM:
             self.dim_transformer = dim_transformer
         elif transformer == Transformer.TRANSFORMER:
-            self.dim_transformer = self.dim_extractor
+            self.dim_transformer = dim_transformer
         else:
             raise Exception("Unknown transformer.")
 
@@ -135,126 +130,459 @@ class Config():
             self.dim_head_in = self.dim_transformer # * self.feat_seq_len
             self.dim_head_out = 1
 
+        self.dropout = 0.0
 
-train_args = TrainConfig(
-    max_epochs=50,
-    batch_size=64,
-    base_lr=1e-3,
-    max_lr=1e-2,
+
+TRAIN_ARGS = TrainConfig(
+    max_epochs=30,
+    batch_size=15, # effective batch size 60, was 64 in paper
+    base_lr=3e-4, # WAS 1e-3 IN ORIGINAL PAPER
+    max_lr=3e-3, # WAS 1e-2 IN ORIGINAL PAPER
+    grad_accum=4,
 )
 
-
-MFCC_CONFIG = Config(
-    "MFCC_CONFIG",
-    Input.MFCC,
-    Extractor.NONE, # No extractor needed for the input features "MFCC".
-    Transformer.NONE, # No Bi-LSTM or Transformer module
-    Head.POOLATTFF, # PoolAttFF regressor head.
-    feat_seq_len=384,
-    train_config=train_args,
+TRAIN_ARGS_FULL = TrainConfig(
+    max_epochs=20,
+    batch_size=TRAIN_ARGS.batch_size,
+    base_lr=TRAIN_ARGS.base_lr,
+    max_lr=TRAIN_ARGS.max_lr,
+    grad_accum=TRAIN_ARGS.grad_accum,
 )
 
-MFCC_EXT_CONFIG = Config(
-    "MFCC_EXT_CONFIG",
-    Input.MFCC_EXT,
-    Extractor.NONE, # No extractor needed for the input features "MFCC_EXT".
-    Transformer.NONE, # No Bi-LSTM or Transformer module
-    Head.POOLATTFF, # PoolAttFF regressor head.
-    feat_seq_len=384,
-    train_config=train_args,
-)
+# We want to saturate the GPU, so increase the batch size for smaller models.
+# Effective batch size stays the same by compensating grad_accum term.
 
-XLSR_CONFIG = Config(
-    "XLSR_CONFIG",
-    Input.XLSR,
-    Extractor.NONE, # No extractor needed for the input features "XLSR".
-    Transformer.NONE, # No Bi-LSTM or Transformer module
-    Head.POOLATTFF, # PoolAttFF regressor head.
-    feat_seq_len=384,
-    train_config=train_args,
-)
+TRAIN_ARGS_PER_XLSR_SIZE: Dict[str, TrainConfig] = {
+    "wav2vec2-xls-r-300m": TrainConfig(
+        max_epochs=TRAIN_ARGS.max_epochs,
+        batch_size=30, # effective batch size 60 -> 24 GB VRAM
+        base_lr=TRAIN_ARGS.base_lr,
+        max_lr=TRAIN_ARGS.max_lr,
+        grad_accum=2,
+    ),
+    "wav2vec2-xls-r-1b": TrainConfig(
+        max_epochs=TRAIN_ARGS.max_epochs,
+        batch_size=20, # effective batch size 60 -> 20 GB VRAM
+        base_lr=TRAIN_ARGS.base_lr,
+        max_lr=TRAIN_ARGS.max_lr,
+        grad_accum=3,
+    ),
+    "wav2vec2-xls-r-2b": TrainConfig(
+        max_epochs=TRAIN_ARGS.max_epochs,
+        batch_size=20, # effective batch size 60 -> 22.5 GB VRAM
+        base_lr=TRAIN_ARGS.base_lr,
+        max_lr=TRAIN_ARGS.max_lr,
+        grad_accum=3,
+    ),
+}
 
-MFCC_BLSTM_CONFIG = Config(
-    "MFCC_BLSTM_CONFIG",
-    Input.MFCC,
-    Extractor.NONE, # No extractor needed for the input features "MFCC".
+
+XLSR_300M_BLSTM_CONFIG = Config(
+    "XLSR_300M_BLSTM_CONFIG",
     Transformer.BLSTM, # Use Bi-LSTM module.
     Head.POOLATTFF, # PoolAttFF regressor head.
     feat_seq_len=384,
     dim_transformer=64, # 32 in each direction
-    train_config=train_args,
+    xlsr_name="wav2vec2-xls-r-300m",
+    down_proj=False,
+    nlayers_transformer=2,
 )
 
-MFCC_EXT_BLSTM_CONFIG = Config(
-    "MFCC_EXT_BLSTM_CONFIG",
-    Input.MFCC_EXT,
-    Extractor.NONE, # No extractor needed for the input features "MFCC_EXT".
+XLSR_1B_BLSTM_CONFIG = Config(
+    "XLSR_1B_BLSTM_CONFIG",
     Transformer.BLSTM, # Use Bi-LSTM module.
     Head.POOLATTFF, # PoolAttFF regressor head.
     feat_seq_len=384,
     dim_transformer=64, # 32 in each direction
-    train_config=train_args,
+    xlsr_name="wav2vec2-xls-r-1b",
+    down_proj=False,
+    nlayers_transformer=2,
 )
 
-XLSR_BLSTM_CONFIG = Config(
-    "XLSR_BLSTM_CONFIG",
-    Input.XLSR,
-    Extractor.NONE, # No extractor needed for the input features "XLSR".
+XLSR_2B_BLSTM_CONFIG = Config(
+    "XLSR_2B_BLSTM_CONFIG",
     Transformer.BLSTM, # Use Bi-LSTM module.
     Head.POOLATTFF, # PoolAttFF regressor head.
     feat_seq_len=384,
     dim_transformer=64, # 32 in each direction
-    train_config=train_args,
+    xlsr_name="wav2vec2-xls-r-2b",
+    down_proj=False,
+    nlayers_transformer=2,
 )
 
-
-XLSR_LARGE_BLSTM_CONFIG = Config(
-    "XLSR_LARGE_BLSTM_CONFIG",
-    Input.XLSR,
-    Extractor.NONE, # No extractor needed for the input features "XLSR".
+XLSR_300M_BLSTM_DP_CONFIG = Config(
+    "XLSR_300M_BLSTM_DP_CONFIG",
     Transformer.BLSTM, # Use Bi-LSTM module.
     Head.POOLATTFF, # PoolAttFF regressor head.
     feat_seq_len=384,
-    dim_transformer=4*64, # 4*32 in each direction
-    train_config=train_args,
+    dim_transformer=64, # 32 in each direction
+    xlsr_name="wav2vec2-xls-r-300m",
+    down_proj=True,
+    nlayers_transformer=2,
 )
 
+XLSR_1B_BLSTM_DP_CONFIG = Config(
+    "XLSR_1B_BLSTM_DP_CONFIG",
+    Transformer.BLSTM, # Use Bi-LSTM module.
+    Head.POOLATTFF, # PoolAttFF regressor head.
+    feat_seq_len=384,
+    dim_transformer=64, # 32 in each direction
+    xlsr_name="wav2vec2-xls-r-1b",
+    down_proj=True,
+    nlayers_transformer=2,
+)
 
-MFCC_TRANS_CONFIG = Config(
-    "MFCC_TRANS_CONFIG",
-    Input.MFCC,
-    Extractor.NONE, # No extractor needed for the input features "MFCC".
+XLSR_2B_BLSTM_DP_CONFIG = Config(
+    "XLSR_2B_BLSTM_DP_CONFIG",
+    Transformer.BLSTM, # Use Bi-LSTM module.
+    Head.POOLATTFF, # PoolAttFF regressor head.
+    feat_seq_len=384,
+    dim_transformer=64, # 32 in each direction
+    xlsr_name="wav2vec2-xls-r-2b",
+    down_proj=True,
+    nlayers_transformer=2,
+)
+
+XLSR_300M_BLSTM_DP_DEEP_CONFIG = Config(
+    "XLSR_300M_BLSTM_DP_DEEP_CONFIG",
+    Transformer.BLSTM, # Use Bi-LSTM module.
+    Head.POOLATTFF, # PoolAttFF regressor head.
+    feat_seq_len=384,
+    dim_transformer=64, # 32 in each direction
+    xlsr_name="wav2vec2-xls-r-300m",
+    down_proj=True,
+    nlayers_transformer=4,
+)
+
+XLSR_1B_BLSTM_DP_DEEP_CONFIG = Config(
+    "XLSR_1B_BLSTM_DP_DEEP_CONFIG",
+    Transformer.BLSTM, # Use Bi-LSTM module.
+    Head.POOLATTFF, # PoolAttFF regressor head.
+    feat_seq_len=384,
+    dim_transformer=64, # 32 in each direction
+    xlsr_name="wav2vec2-xls-r-1b",
+    down_proj=True,
+    nlayers_transformer=4,
+)
+
+XLSR_2B_BLSTM_DP_DEEP_CONFIG = Config(
+    "XLSR_2B_BLSTM_DP_DEEP_CONFIG",
+    Transformer.BLSTM, # Use Bi-LSTM module.
+    Head.POOLATTFF, # PoolAttFF regressor head.
+    feat_seq_len=384,
+    dim_transformer=64, # 32 in each direction
+    xlsr_name="wav2vec2-xls-r-2b",
+    down_proj=True,
+    nlayers_transformer=4,
+)
+
+XLSR_300M_TRANSFORMER_32_CONFIG = Config(
+    "XLSR_300M_TRANSFORMER_32_CONFIG",
     Transformer.TRANSFORMER, # Use Transformer module.
     Head.POOLATTFF, # PoolAttFF regressor head.
     feat_seq_len=384,
-    train_config=train_args,
+    dim_transformer=32, # hidden size
+    xlsr_name="wav2vec2-xls-r-300m",
+    down_proj=True,
+    nhead_transformer=4,
+    nlayers_transformer=2,
 )
 
-MFCC_EXT_TRANS_CONFIG = Config(
-    "MFCC_EXT_TRANS_CONFIG",
-    Input.MFCC_EXT,
-    Extractor.NONE, # No extractor needed for the input features "MFCC_EXT".
+XLSR_1B_TRANSFORMER_32_CONFIG = Config(
+    "XLSR_1B_TRANSFORMER_32_CONFIG",
     Transformer.TRANSFORMER, # Use Transformer module.
     Head.POOLATTFF, # PoolAttFF regressor head.
     feat_seq_len=384,
-    train_config=train_args,
+    dim_transformer=32, # hidden size
+    xlsr_name="wav2vec2-xls-r-1b",
+    down_proj=True,
+    nhead_transformer=4,
+    nlayers_transformer=2,
 )
 
-XLSR_TRANS_CONFIG = Config(
-    "XLSR_TRANS_CONFIG",
-    Input.XLSR,
-    Extractor.NONE, # No extractor needed for the input features "XLSR".
+XLSR_2B_TRANSFORMER_32_CONFIG = Config(
+    "XLSR_2B_TRANSFORMER_32_CONFIG",
     Transformer.TRANSFORMER, # Use Transformer module.
     Head.POOLATTFF, # PoolAttFF regressor head.
     feat_seq_len=384,
-    train_config=train_args,
+    dim_transformer=32, # hidden size
+    xlsr_name="wav2vec2-xls-r-2b",
+    down_proj=True,
+    nhead_transformer=4,
+    nlayers_transformer=2,
+)
+
+XLSR_300M_TRANSFORMER_64_CONFIG = Config(
+    "XLSR_300M_TRANSFORMER_64_CONFIG",
+    Transformer.TRANSFORMER, # Use Transformer module.
+    Head.POOLATTFF, # PoolAttFF regressor head.
+    feat_seq_len=384,
+    dim_transformer=64, # hidden size
+    xlsr_name="wav2vec2-xls-r-300m",
+    down_proj=True,
+    nhead_transformer=4,
+    nlayers_transformer=2,
+)
+
+XLSR_1B_TRANSFORMER_64_CONFIG = Config(
+    "XLSR_1B_TRANSFORMER_64_CONFIG",
+    Transformer.TRANSFORMER, # Use Transformer module.
+    Head.POOLATTFF, # PoolAttFF regressor head.
+    feat_seq_len=384,
+    dim_transformer=64, # hidden size
+    xlsr_name="wav2vec2-xls-r-1b",
+    down_proj=True,
+    nhead_transformer=4,
+    nlayers_transformer=2,
+)
+
+XLSR_2B_TRANSFORMER_64_CONFIG = Config(
+    "XLSR_2B_TRANSFORMER_64_CONFIG",
+    Transformer.TRANSFORMER, # Use Transformer module.
+    Head.POOLATTFF, # PoolAttFF regressor head.
+    feat_seq_len=384,
+    dim_transformer=64, # hidden size
+    xlsr_name="wav2vec2-xls-r-2b",
+    down_proj=True,
+    nhead_transformer=4,
+    nlayers_transformer=2,
+)
+
+XLSR_300M_TRANSFORMER_32DEEP_CONFIG = Config(
+    "XLSR_300M_TRANSFORMER_32DEEP_CONFIG",
+    Transformer.TRANSFORMER, # Use Transformer module.
+    Head.POOLATTFF, # PoolAttFF regressor head.
+    feat_seq_len=384,
+    dim_transformer=32, # hidden size
+    xlsr_name="wav2vec2-xls-r-300m",
+    down_proj=True,
+    nhead_transformer=4,
+    nlayers_transformer=4,
+)
+
+XLSR_1B_TRANSFORMER_32DEEP_CONFIG = Config(
+    "XLSR_1B_TRANSFORMER_32DEEP_CONFIG",
+    Transformer.TRANSFORMER, # Use Transformer module.
+    Head.POOLATTFF, # PoolAttFF regressor head.
+    feat_seq_len=384,
+    dim_transformer=32, # hidden size
+    xlsr_name="wav2vec2-xls-r-1b",
+    down_proj=True,
+    nhead_transformer=4,
+    nlayers_transformer=4,
+)
+
+XLSR_2B_TRANSFORMER_32DEEP_CONFIG = Config(
+    "XLSR_2B_TRANSFORMER_32DEEP_CONFIG",
+    Transformer.TRANSFORMER, # Use Transformer module.
+    Head.POOLATTFF, # PoolAttFF regressor head.
+    feat_seq_len=384,
+    dim_transformer=32, # hidden size
+    xlsr_name="wav2vec2-xls-r-2b",
+    down_proj=True,
+    nhead_transformer=4,
+    nlayers_transformer=4,
+)
+
+XLSR_300M_TRANSFORMER_64DEEP_CONFIG = Config(
+    "XLSR_300M_TRANSFORMER_64DEEP_CONFIG",
+    Transformer.TRANSFORMER, # Use Transformer module.
+    Head.POOLATTFF, # PoolAttFF regressor head.
+    feat_seq_len=384,
+    dim_transformer=64, # hidden size
+    xlsr_name="wav2vec2-xls-r-300m",
+    down_proj=True,
+    nhead_transformer=4,
+    nlayers_transformer=4,
+)
+
+XLSR_1B_TRANSFORMER_64DEEP_CONFIG = Config(
+    "XLSR_1B_TRANSFORMER_64DEEP_CONFIG",
+    Transformer.TRANSFORMER, # Use Transformer module.
+    Head.POOLATTFF, # PoolAttFF regressor head.
+    feat_seq_len=384,
+    dim_transformer=64, # hidden size
+    xlsr_name="wav2vec2-xls-r-1b",
+    down_proj=True,
+    nhead_transformer=4,
+    nlayers_transformer=4,
+)
+
+XLSR_2B_TRANSFORMER_64DEEP_CONFIG = Config(
+    "XLSR_2B_TRANSFORMER_64DEEP_CONFIG",
+    Transformer.TRANSFORMER, # Use Transformer module.
+    Head.POOLATTFF, # PoolAttFF regressor head.
+    feat_seq_len=384,
+    dim_transformer=64, # hidden size
+    xlsr_name="wav2vec2-xls-r-2b",
+    down_proj=True,
+    nhead_transformer=4,
+    nlayers_transformer=4,
+)
+
+XLSR_300M_TRANSFORMER_32DEEPER_CONFIG = Config(
+    "XLSR_300M_TRANSFORMER_32DEEPER_CONFIG",
+    Transformer.TRANSFORMER, # Use Transformer module.
+    Head.POOLATTFF, # PoolAttFF regressor head.
+    feat_seq_len=384,
+    dim_transformer=32, # hidden size
+    xlsr_name="wav2vec2-xls-r-300m",
+    down_proj=True,
+    nhead_transformer=4,
+    nlayers_transformer=6,
+)
+
+XLSR_1B_TRANSFORMER_32DEEPER_CONFIG = Config(
+    "XLSR_1B_TRANSFORMER_32DEEPER_CONFIG",
+    Transformer.TRANSFORMER, # Use Transformer module.
+    Head.POOLATTFF, # PoolAttFF regressor head.
+    feat_seq_len=384,
+    dim_transformer=32, # hidden size
+    xlsr_name="wav2vec2-xls-r-1b",
+    down_proj=True,
+    nhead_transformer=4,
+    nlayers_transformer=6,
+)
+
+XLSR_2B_TRANSFORMER_32DEEPER_CONFIG = Config(
+    "XLSR_2B_TRANSFORMER_32DEEPER_CONFIG",
+    Transformer.TRANSFORMER, # Use Transformer module.
+    Head.POOLATTFF, # PoolAttFF regressor head.
+    feat_seq_len=384,
+    dim_transformer=32, # hidden size
+    xlsr_name="wav2vec2-xls-r-2b",
+    down_proj=True,
+    nhead_transformer=4,
+    nlayers_transformer=6,
+)
+
+XLSR_300M_TRANSFORMER_64DEEPER_CONFIG = Config(
+    "XLSR_300M_TRANSFORMER_64DEEPER_CONFIG",
+    Transformer.TRANSFORMER, # Use Transformer module.
+    Head.POOLATTFF, # PoolAttFF regressor head.
+    feat_seq_len=384,
+    dim_transformer=64, # hidden size
+    xlsr_name="wav2vec2-xls-r-300m",
+    down_proj=True,
+    nhead_transformer=4,
+    nlayers_transformer=6,
+)
+
+XLSR_1B_TRANSFORMER_64DEEPER_CONFIG = Config(
+    "XLSR_1B_TRANSFORMER_64DEEPER_CONFIG",
+    Transformer.TRANSFORMER, # Use Transformer module.
+    Head.POOLATTFF, # PoolAttFF regressor head.
+    feat_seq_len=384,
+    dim_transformer=64, # hidden size
+    xlsr_name="wav2vec2-xls-r-1b",
+    down_proj=True,
+    nhead_transformer=4,
+    nlayers_transformer=6,
+)
+
+XLSR_2B_TRANSFORMER_64DEEPER_CONFIG = Config(
+    "XLSR_2B_TRANSFORMER_64DEEPER_CONFIG",
+    Transformer.TRANSFORMER, # Use Transformer module.
+    Head.POOLATTFF, # PoolAttFF regressor head.
+    feat_seq_len=384,
+    dim_transformer=64, # hidden size
+    xlsr_name="wav2vec2-xls-r-2b",
+    down_proj=True,
+    nhead_transformer=4,
+    nlayers_transformer=6,
 )
 
 
-# 4 models used by paper.
+
+FEAT_SEQ_LEN=384
+AUDIO_SEQ_LEN=122960 # 7.685 seconds => gives exactly 384 features (* see below)
+
+# *: 122960-123279 give 384 features, but these give basically same results
+# checked with:
+#   import torch
+#   from transformers import Wav2Vec2FeatureExtractor, Wav2Vec2Model
+#   helper = Wav2Vec2FeatureExtractor(feature_size=1,sampling_rate=16000,padding_value=0.0,do_normalize=True,return_attention_mask=True)
+#   model = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-xls-r-300m")
+#   data = torch.randn((123279,))
+#   input_rnd1 = helper(data[:122960], sampling_rate=16000, return_tensors="pt")["input_values"]
+#   input_rnd2 = helper(data[:123279], sampling_rate=16000, return_tensors="pt")["input_values"]
+#   out_rnd1 = model(input_rnd1).last_hidden_state.squeeze()
+#   out_rnd2 = model(input_rnd2).last_hidden_state.squeeze()
+#   torch.allclose(out_rnd1, out_rnd2, atol=0.005, rtol=0)
+
+
+# Configs used by paper.
 ALL_CONFIGS: List[Config] = [
-    MFCC_CONFIG,
-    XLSR_CONFIG,
-    MFCC_BLSTM_CONFIG,
-    XLSR_BLSTM_CONFIG,
+    XLSR_300M_BLSTM_CONFIG, # without DP to match first paper
+    XLSR_1B_BLSTM_CONFIG,
+    XLSR_2B_BLSTM_CONFIG,
+    XLSR_300M_BLSTM_DP_CONFIG, # with down-projection before BLSTM for most fair comparison
+    XLSR_1B_BLSTM_DP_CONFIG,
+    XLSR_2B_BLSTM_DP_CONFIG,
+    XLSR_300M_BLSTM_DP_DEEP_CONFIG, # 4 layers
+    XLSR_1B_BLSTM_DP_DEEP_CONFIG,
+    XLSR_2B_BLSTM_DP_DEEP_CONFIG,
+    XLSR_300M_TRANSFORMER_32_CONFIG, # h=32, 2 layers
+    XLSR_1B_TRANSFORMER_32_CONFIG,
+    XLSR_2B_TRANSFORMER_32_CONFIG,
+    XLSR_300M_TRANSFORMER_64_CONFIG, # h=64, 2 layers
+    XLSR_1B_TRANSFORMER_64_CONFIG,
+    XLSR_2B_TRANSFORMER_64_CONFIG,
+    XLSR_300M_TRANSFORMER_32DEEP_CONFIG, # h=32, 4 layers
+    XLSR_1B_TRANSFORMER_32DEEP_CONFIG,
+    XLSR_2B_TRANSFORMER_32DEEP_CONFIG,
+    # XLSR_300M_TRANSFORMER_64DEEP_CONFIG, # h=64, 4 layers
+    # XLSR_1B_TRANSFORMER_64DEEP_CONFIG,
+    # XLSR_2B_TRANSFORMER_64DEEP_CONFIG,
+    # XLSR_300M_TRANSFORMER_32DEEPER_CONFIG, # h=32, 6 layers
+    # XLSR_1B_TRANSFORMER_32DEEPER_CONFIG, 
+    # XLSR_2B_TRANSFORMER_32DEEPER_CONFIG,
+    # XLSR_300M_TRANSFORMER_64DEEPER_CONFIG, # h=64, 6 layers
+    # XLSR_1B_TRANSFORMER_64DEEPER_CONFIG,
+    # XLSR_2B_TRANSFORMER_64DEEPER_CONFIG,
 ]
+
+# XLS-R 300M configs
+XLSR_300M_CONFIGS: List[Config] = [
+    XLSR_300M_BLSTM_CONFIG,
+    XLSR_300M_BLSTM_DP_CONFIG,
+    XLSR_300M_BLSTM_DP_DEEP_CONFIG,
+    XLSR_300M_TRANSFORMER_32_CONFIG,
+    XLSR_300M_TRANSFORMER_64_CONFIG,
+    XLSR_300M_TRANSFORMER_32DEEP_CONFIG,
+    # XLSR_300M_TRANSFORMER_64DEEP_CONFIG, # not converging well with 35% data
+    # XLSR_300M_TRANSFORMER_32DEEPER_CONFIG,
+    # XLSR_300M_TRANSFORMER_64DEEPER_CONFIG,
+]
+
+# XLS-R 1B configs
+XLSR_1B_CONFIGS: List[Config] = [
+    XLSR_1B_BLSTM_CONFIG,
+    XLSR_1B_BLSTM_DP_CONFIG,
+    XLSR_1B_BLSTM_DP_DEEP_CONFIG,
+    XLSR_1B_TRANSFORMER_32_CONFIG,
+    XLSR_1B_TRANSFORMER_64_CONFIG,
+    XLSR_1B_TRANSFORMER_32DEEP_CONFIG,
+    # XLSR_1B_TRANSFORMER_64DEEP_CONFIG, # not converging well with 35% data
+    # XLSR_1B_TRANSFORMER_32DEEPER_CONFIG,
+    # XLSR_1B_TRANSFORMER_64DEEPER_CONFIG,
+]
+
+# XLS-R 2B configs
+XLSR_2B_CONFIGS: List[Config] = [
+    XLSR_2B_BLSTM_CONFIG,
+    XLSR_2B_BLSTM_DP_CONFIG,
+    XLSR_2B_BLSTM_DP_DEEP_CONFIG,
+    XLSR_2B_TRANSFORMER_32_CONFIG,
+    XLSR_2B_TRANSFORMER_64_CONFIG,
+    XLSR_2B_TRANSFORMER_32DEEP_CONFIG, 
+    # XLSR_2B_TRANSFORMER_64DEEP_CONFIG, # not converging well with 35% data
+    # XLSR_2B_TRANSFORMER_32DEEPER_CONFIG,
+    # XLSR_2B_TRANSFORMER_64DEEPER_CONFIG,
+]
+
+CONFIGS_PER_XLSR_SIZE: Dict[str, List[Config]] = {
+    "wav2vec2-xls-r-300m": XLSR_300M_CONFIGS,
+    "wav2vec2-xls-r-1b": XLSR_1B_CONFIGS,
+    "wav2vec2-xls-r-2b": XLSR_2B_CONFIGS,
+}

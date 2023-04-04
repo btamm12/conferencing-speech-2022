@@ -3,11 +3,11 @@
 Copy files from
 
 ```
-data/processed/val_subset_eg/predictions/[model_prediction].csv
+data/processed/val_eg_subset/predictions/[model_prediction].csv
 ```
 
 and paste it like this
 
 ```
-src/eval/predictions/val_subset_eg/[model_prediction].csv
+src/eval/predictions/val_eg_subset/[model_prediction].csv
 ```
