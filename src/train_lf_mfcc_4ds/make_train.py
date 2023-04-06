@@ -34,9 +34,9 @@ def main(input, xlsr_name, cpus):
         print("==================================")
         print(f"Starting training {xlsr_name} layers {layers_str}")
         print("==================================")
-    extract_features(input, xlsr_name, layers, Split.TRAIN)
-    extract_features(input, xlsr_name, layers, Split.VAL)
-    # train_model(input, xlsr_name, layers, cpus)
+    # extract_features(input, xlsr_name, layers, Split.TRAIN)
+    # extract_features(input, xlsr_name, layers, Split.VAL)
+    train_model(input, xlsr_name, layers, cpus)
 
 
 

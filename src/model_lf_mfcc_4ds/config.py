@@ -168,16 +168,16 @@ TRAIN_ARGS = TrainConfig(
 TRAIN_ARGS_PER_XLSR_SIZE: Dict[str, TrainConfig] = {
     "wav2vec2-xls-r-300m": TrainConfig(
         max_epochs=TRAIN_ARGS.max_epochs,
-        batch_size=20, # effective batch size 60 -> 24 GB VRAM
-        grad_accum=3,
+        batch_size=10, # effective batch size 60 -> 24 GB VRAM
+        grad_accum=6,
         default_lr=TRAIN_ARGS.default_lr,
         default_warmup_steps=TRAIN_ARGS.default_warmup_steps,
         default_weight_decay=TRAIN_ARGS.default_weight_decay,
     ),
     "wav2vec2-xls-r-1b": TrainConfig(
         max_epochs=TRAIN_ARGS.max_epochs,
-        batch_size=15, # effective batch size 60 -> 24 GB VRAM
-        grad_accum=4,
+        batch_size=6, # effective batch size 60 -> 24 GB VRAM
+        grad_accum=10,
         default_lr=TRAIN_ARGS.default_lr,
         default_warmup_steps=TRAIN_ARGS.default_warmup_steps,
         default_weight_decay=TRAIN_ARGS.default_weight_decay,
@@ -194,8 +194,8 @@ TRAIN_ARGS_PER_XLSR_SIZE: Dict[str, TrainConfig] = {
 
 TRAIN_ARGS_MFCC = TrainConfig(
         max_epochs=TRAIN_ARGS.max_epochs,
-        batch_size=30,
-        grad_accum=2,
+        batch_size=12,
+        grad_accum=5,
         default_lr=TRAIN_ARGS.default_lr,
         default_warmup_steps=TRAIN_ARGS.default_warmup_steps,
         default_weight_decay=TRAIN_ARGS.default_weight_decay,
@@ -615,46 +615,46 @@ ALL_CONFIGS: List[Config] = [
 
 # MFCC configs
 MFCC_CONFIGS: List[Config] = [
-    MFCC_BLSTM_CONFIG,
+    # MFCC_BLSTM_CONFIG,
     MFCC_BLSTM_DP_CONFIG,
-    MFCC_BLSTM_DP_DEEP_CONFIG,
-    MFCC_TRANSFORMER_32_CONFIG,
-    MFCC_TRANSFORMER_64_CONFIG,
+    # MFCC_BLSTM_DP_DEEP_CONFIG,
+    # MFCC_TRANSFORMER_32_CONFIG,
+    # MFCC_TRANSFORMER_64_CONFIG,
     MFCC_TRANSFORMER_32DEEP_CONFIG,
-    MFCC_TRANSFORMER_64DEEP_CONFIG, # not converging well with 35% data
+    # MFCC_TRANSFORMER_64DEEP_CONFIG, # not converging well with 35% data
 ]
 
 # XLS-R 300M configs
 XLSR_300M_CONFIGS: List[Config] = [
-    XLSR_300M_BLSTM_CONFIG,
+    # XLSR_300M_BLSTM_CONFIG,
     XLSR_300M_BLSTM_DP_CONFIG,
-    XLSR_300M_BLSTM_DP_DEEP_CONFIG,
-    XLSR_300M_TRANSFORMER_32_CONFIG,
-    XLSR_300M_TRANSFORMER_64_CONFIG,
+    # XLSR_300M_BLSTM_DP_DEEP_CONFIG,
+    # XLSR_300M_TRANSFORMER_32_CONFIG,
+    # XLSR_300M_TRANSFORMER_64_CONFIG,
     XLSR_300M_TRANSFORMER_32DEEP_CONFIG,
-    XLSR_300M_TRANSFORMER_64DEEP_CONFIG, # not converging well with 35% data
+    # XLSR_300M_TRANSFORMER_64DEEP_CONFIG, # not converging well with 35% data
 ]
 
 # XLS-R 1B configs
 XLSR_1B_CONFIGS: List[Config] = [
-    XLSR_1B_BLSTM_CONFIG,
+    # XLSR_1B_BLSTM_CONFIG,
     XLSR_1B_BLSTM_DP_CONFIG,
-    XLSR_1B_BLSTM_DP_DEEP_CONFIG,
-    XLSR_1B_TRANSFORMER_32_CONFIG,
-    XLSR_1B_TRANSFORMER_64_CONFIG,
+    # XLSR_1B_BLSTM_DP_DEEP_CONFIG,
+    # XLSR_1B_TRANSFORMER_32_CONFIG,
+    # XLSR_1B_TRANSFORMER_64_CONFIG,
     XLSR_1B_TRANSFORMER_32DEEP_CONFIG,
-    XLSR_1B_TRANSFORMER_64DEEP_CONFIG, # not converging well with 35% data
+    # XLSR_1B_TRANSFORMER_64DEEP_CONFIG, # not converging well with 35% data
 ]
 
 # XLS-R 2B configs
 XLSR_2B_CONFIGS: List[Config] = [
-    XLSR_2B_BLSTM_CONFIG,
+    # XLSR_2B_BLSTM_CONFIG,
     XLSR_2B_BLSTM_DP_CONFIG,
-    XLSR_2B_BLSTM_DP_DEEP_CONFIG,
-    XLSR_2B_TRANSFORMER_32_CONFIG,
-    XLSR_2B_TRANSFORMER_64_CONFIG,
+    # XLSR_2B_BLSTM_DP_DEEP_CONFIG,
+    # XLSR_2B_TRANSFORMER_32_CONFIG,
+    # XLSR_2B_TRANSFORMER_64_CONFIG,
     XLSR_2B_TRANSFORMER_32DEEP_CONFIG,
-    XLSR_2B_TRANSFORMER_64DEEP_CONFIG, # not converging well with 35% data
+    # XLSR_2B_TRANSFORMER_64DEEP_CONFIG, # not converging well with 35% data
 ]
 
 CONFIGS_PER_XLSR_SIZE: Dict[str, List[Config]] = {

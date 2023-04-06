@@ -52,11 +52,13 @@ class CsvDataset(Dataset):
         self,
         feat_name: str, # "mfcc" or "xls-r-[SIZE]"
         split: Split,
+        batch_size: int,
     ) -> None:
         super().__init__()
 
         self.feat_name = feat_name
         self.split = split
+        self.batch_size = batch_size # for hacky caching of subset features
 
         # For printing...
         split_name = str(split).lower().split(".")[1]
@@ -67,19 +69,16 @@ class CsvDataset(Dataset):
             msg = "if include_subset is True, then only Split.TRAIN and Split.VAL are accepted"
             raise Exception(msg)
         if split == Split.TRAIN:
-            split_subsets = TRAIN_SUBSET_SPLITS
+            split_subset = Split.TRAIN_SUBSET
         if split == Split.VAL:
-            split_subsets = VAL_SUBSET_SPLITS
-        self.num_subsets = len(split_subsets)
+            split_subset = Split.VAL_SUBSET
+        self.num_subsets = 1
         dataset = constants.get_dataset(split, example=False, use_35=False)
-        dataset_subsets = [
-            constants.get_dataset(x, example=False, use_35=False)
-            for x in split_subsets
-        ]
 
         # Type to CSV column.
         col_path = STANDARDIZED_CSV_INFO.col_xlsr_path
-        col_path = col_path % feat_name # contains %s dir for input name
+        col_subset = STANDARDIZED_CSV_INFO.col_in_subset
+        col_mos = STANDARDIZED_CSV_INFO.col_norm_mos
 
         # Load CSV.
         self.csv_data = []  # feature_path, norm_mos
@@ -93,116 +92,104 @@ class CsvDataset(Dataset):
 
                 # Save feature_path, norm_mos
                 file_path: str = in_row[col_path]
-                norm_mos = torch.tensor(
-                    float(in_row[STANDARDIZED_CSV_INFO.col_norm_mos]))
-                self.csv_data.append([file_path, norm_mos])
+                file_path = file_path % feat_name # contains %s dir for input name
+                in_subset: bool = in_row[col_subset] == "True"
+                norm_mos = torch.tensor(float(in_row[col_mos]))
+                self.csv_data.append([file_path, in_subset, norm_mos])
 
-        self.csv_data_per_subset = []
-        self.idx_to_full_idx_mapping_per_subset = []
-        self.csv_data_per_subset_extended = [[] for _ in range(self.num_subsets)]
-        self.idx_to_full_idx_mapping_per_subset_extended = [[] for _ in range(self.num_subsets)]
-        for subset_idx in range(self.num_subsets):
-            _data = [] # feature_path, norm_mos
-            _dataset = dataset_subsets[subset_idx]
-            with open(_dataset.csv_path, encoding="utf-8", mode="r") as in_csv:
-                csv_reader = csv.reader(in_csv)
-                for idx, in_row in enumerate(csv_reader):
+        # NOTE!!
+        # This code assumes num_workers == 1 in the dataloader!
 
-                    # Skip header row.
-                    if idx == 0:
-                        continue
+        # - listens to stream of (features, labels) from full dataset
+        # - whenever a subset samples appears, it is added to the buffer
+        # - when the buffer is full, it is emitted during the next batch
+        self.subset_buffer = []
+        # samples are transferred from buffer to emitter when the batch size is
+        # reached, then emitted on every __getitem__()
+        self.subset_emitter = []
 
-                    # Save feature_path, norm_mos
-                    file_path: str = in_row[col_path]
-                    norm_mos = torch.tensor(
-                        float(in_row[STANDARDIZED_CSV_INFO.col_norm_mos]))
-                    _data.append([file_path, norm_mos])
-                
-            # Find mapping between indices of subset and full csv. This is simple
-            # since the order is the same, but the subset excludes samples of the
-            # full csv.
-            idx_full = 0
-            idx_subset = 0
-            N_full = len(self.csv_data)
-            N_subset = len(_data)
-            _idx_to_full_idx_mapping = []
-            while idx_full < N_full and idx_subset < N_subset:
-                file_full = self.csv_data[idx_full][0]
-                file_subset = _data[idx_subset][0]
-                if file_full == file_subset:
-                    _idx_to_full_idx_mapping.append(idx_full)
-                    idx_full += 1
-                    idx_subset += 1
-                else:
-                    idx_full += 1
-            assert len(_idx_to_full_idx_mapping) == N_subset
-
-            self.csv_data_per_subset.append(_data)
-            self.idx_to_full_idx_mapping_per_subset.append(_idx_to_full_idx_mapping)
-
-            self.recalculate_subset_csv_extended(subset_idx)
+        self.batch_counter = 0
 
 
         # Create transform.
         _seq_len = config.FEAT_SEQ_LEN
         self.transform = MyCrop(_seq_len)
 
+        if feat_name == "mfcc":
+            self.feat_cache = self._create_feat_cache()
 
-    def recalculate_subset_csv_extended(self, subset_idx: int):
-        _csv_data = self.csv_data_per_subset[subset_idx]
-        _csv_data_extended = _csv_data.copy()
-        _mapping = self.idx_to_full_idx_mapping_per_subset[subset_idx]
-        _mapping_extended = _mapping.copy()
-        N_full = len(self.csv_data)
-        N_subset = len(_csv_data)
+    def _create_feat_cache(self):
+        print("Creating feature cache...")
+        cache = []
+        for index in range(len(self.csv_data)):
+            cache.append(self._getitem_impl(index, use_cache=False))
+        print("Done.")
+        return cache
 
-        new_N_subset = N_subset
-        while new_N_subset < N_full:
-            N_to_extend = min(N_full - new_N_subset, N_subset)
-            extended_indices = list(range(N_subset))
-            random.shuffle(extended_indices)
-            extended_indices = extended_indices[:N_to_extend]
-            for idx in extended_indices:
-                _csv_data_extended.append(_csv_data[idx])
-                _mapping_extended.append(_mapping[idx])
-            new_N_subset += N_to_extend
 
-        self.csv_data_per_subset_extended[subset_idx] = _csv_data_extended
-        self.idx_to_full_idx_mapping_per_subset_extended[subset_idx] = _mapping_extended
-
+    def new_epoch(self):
+        self.batch_counter = 0
+        self.subset_emitter = []
+        self.subset_buffer = []
 
     def on_epoch_start(self):
-        for subset_idx in range(self.num_subsets):
-            self.recalculate_subset_csv_extended(subset_idx)
+        self.new_epoch()
 
     def __len__(self):
         return len(self.csv_data)
 
-    def _getitem_impl(self, index: int, subset_idx: int = None):
-        # print("get_item %0.6i start... " % index, end="")
-
-        if subset_idx is None:
-            _index = index
-        else:
-            _index = self.idx_to_full_idx_mapping_per_subset_extended[subset_idx][index]
-            _csv_subset_path = self.csv_data_per_subset_extended[subset_idx][index][0]
-            _csv_full_path = self.csv_data[_index][0]
-            assert _csv_subset_path == _csv_full_path
+    def _getitem_impl(self, index: int, use_cache: bool = True):
+        if self.feat_name == "mfcc" and use_cache:
+            return self.feat_cache[index]
 
         # Load features and convert to Tensor.
-        file_path: str = self.csv_data[_index][0]
+        file_path: str = self.csv_data[index][0]
         xlsr_states = torch.load(full_path(file_path)) # could also be MFCC, but I will [wrap this in brackets] ahead of time for consistency
         features = [self.transform(x.squeeze(0)) for x in xlsr_states]
-        norm_mos = self.csv_data[_index][1]
+        norm_mos = self.csv_data[index][2]
 
         return (features, norm_mos)
 
+    def _clone(self, result):
+        features, norm_mos = result
+        return [f.clone() for f in features], norm_mos.clone()
+
 
     def __getitem__(self, index) -> Tuple[Tensor, Tensor]:
-        results = []
-        results.append(self._getitem_impl(index, subset_idx=None))
-        for subset_idx in range(self.num_subsets):
-            results.append(self._getitem_impl(index, subset_idx))
-        features = tuple(result[0] for result in results)
-        labels = tuple(result[1] for result in results)
-        return features, labels
+        if self.batch_counter == 0:
+            self.new_epoch()
+        result_full = self._getitem_impl(index)
+
+        # Append this sample to the subset buffer if it is in the subset.
+        _in_subset = self.csv_data[index][1]
+        if _in_subset:
+            self.subset_buffer.append(self._clone(result_full))
+        
+        # Move n_batch samples from the buffer to the emitter at the start of a batch
+        # (if the buffer has enough samples).
+        _start_of_batch = self.batch_counter % self.batch_size == 0
+        if _start_of_batch and len(self.subset_buffer) >= self.batch_size:
+            to_emit = self.subset_buffer[:self.batch_size]
+            self.subset_buffer = self.subset_buffer[self.batch_size:]
+            self.subset_emitter.extend(to_emit)
+
+        # Emit samples while the emitter has elements.
+        subset_emitted = False
+        if len(self.subset_emitter) > 0:
+            result_subset = self.subset_emitter.pop(0)
+            subset_emitted = True
+        else:
+            if self.feat_name == "mfcc":
+                _dummy_feats = [torch.zeros((0,))]
+            else:
+                _dummy_feats = [torch.zeros((0,)), torch.zeros((0,))]
+            _dummy_label = torch.zeros((0,))
+            result_subset = (_dummy_feats, _dummy_label)
+
+        # Combine the results and include an indicator if the subset is non-empty.
+        features = (result_full[0], result_subset[0])
+        labels = (result_full[1], result_subset[1])
+        subset_emitted = torch.tensor(int(subset_emitted), dtype=torch.int64)
+
+        self.batch_counter += 1
+        return (features, labels, subset_emitted)

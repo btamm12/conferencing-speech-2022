@@ -24,13 +24,14 @@ def make_dataloader(
 ):
 
     # Create DataLoader.
-    csv_dataset = CsvDataset(feat_name, split)
+    csv_dataset = CsvDataset(feat_name, split, batch_size)
     csv_dataloader = DataLoader(
         csv_dataset,
         batch_size=batch_size,
         shuffle=True,
         num_workers=cpus-1,
         persistent_workers=(cpus > 1),
+        prefetch_factor=4 if (cpus > 1) else 2, # (default 2)
     )
     return csv_dataloader
 
@@ -125,7 +126,6 @@ def _train_model(
     
 
     # Start main operation:
-
     if ckpt_path is not None:
         trainer.fit(model, train_dl, val_dl, ckpt_path=str(ckpt_path))
     else:
@@ -167,7 +167,7 @@ if __name__ == "__main__":
     xlsr_name = None
     layers = None
     # input = "xlsr"
-    # xlsr_name = "wav2vec2-xls-r-2b"
+    # xlsr_name = "wav2vec2-xls-r-300m"
     # layers = [15,36]
     cpus: int = 1
     train_model(
