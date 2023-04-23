@@ -190,7 +190,7 @@ class CsvDataset(Dataset):
         _shift_add_snrs = [50.0, 40.0, 30.0, 20.0, 10.0, 0.0]
 
         # AddGaussianSNR, Mp3Compression, RIR (different absorptions for 3 different sizes), SpecAugment (SpecFrequencyMask), TimeMask, TimeStretch, Shift + different SNR,
-        self.corruptions: List[BaseTransform] = [
+        corruptions: List[BaseTransform] = [
             *(
                 AddGaussianSNR(min_snr_in_db=x, max_snr_in_db=x, p=1.0)
                 for x in _gaussian_snrs
@@ -249,7 +249,7 @@ class CsvDataset(Dataset):
             ),
         ]
 
-        self.corruption_names = [
+        corruption_names = [
             "clean",
             *(f"add_gaussian_snr_{x}" for x in range(len(_gaussian_snrs))),
             *(f"mp3_compression_{x}" for x in range(len(_mp3_bitrates))),
@@ -268,19 +268,18 @@ class CsvDataset(Dataset):
             *("time_stretch_%02d" % x for x in range(len(_time_stretches))),
         ]
 
-        assert len(self.corruptions) + 1 == len(self.corruption_names) # + clean
+        assert len(corruptions) + 1 == len(corruption_names) # + clean
 
         self.all_corruption_names = corruption_names
-        self.all_corruptions = all_corruptions
-
+        self.all_corruptions = corruptions
         num_all_corrupts = len(self.all_corruption_names)
 
 
         # partition definition:
         part_start = int(num_all_corrupts * part / num_parts)
         part_end = int(num_all_corrupts * (part+1) / num_parts)
-        self.corruptions = self.all_corruptions[part_start:part_end]
-        self.corruption_names = self.all_corruption_names[part_start:part_end]
+        self.corruptions = corruptions[part_start:part_end]
+        self.corruption_names = corruption_names[part_start:part_end]
 
     def __len__(self):
         return len(self.csv_data)
@@ -312,6 +311,14 @@ class CsvDataset(Dataset):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 audio_np_corrupt = transform(audio_np, sample_rate=16000)
+
+                # small deviation possible with mp3 compression
+                if isinstance(transform, Mp3Compression):
+                    if len(audio_np_corrupt) > len(audio_np):
+                        audio_np_corrupt = audio_np_corrupt[:len(audio_np)]
+                    if len(audio_np_corrupt) < len(audio_np):
+                        to_pad = len(audio_np) - len(audio_np_corrupt)
+                        audio_np_corrupt = np.pad(audio_np_corrupt, (0,to_pad))
             inputs = self.feature_extractor(
                 audio_np_corrupt,
                 sampling_rate=self.sampling_rate,

@@ -247,5 +247,7 @@ def predict_model(split: Split, cpus: int, part: int, num_parts: int):
 
 if __name__ == "__main__":
     cpus: int = 1
+    part = 0
+    num_parts = 1
     for split in [Split.VAL, Split.VAL_SUBSET]:
-        predict_model(split, cpus)
+        predict_model(split, cpus, part, num_parts)
