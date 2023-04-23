@@ -11,8 +11,8 @@ from audiomentations import (
     Shift,
 )
 from audiomentations.core.transforms_interface import BaseTransform
-from src.predict_layer_fusion_corrupted.shift_add_snr import ShiftAddSNR
-from src.predict_layer_fusion_corrupted.time_mask_final import TimeMaskFinal
+from src.predict_layer_fusion_41_corrupted.shift_add_snr import ShiftAddSNR
+from src.predict_layer_fusion_41_corrupted.time_mask_final import TimeMaskFinal
 import pyroomacoustics as pra
 
 import csv
@@ -177,8 +177,8 @@ class CsvDataset(Dataset):
         ]
         # _freq_mask_fracs = [0.0, 0.05, 0.10, 0.15, 0.20, 0.25]
         # _time_mask_fracs = [0.0, 0.05, 0.10, 0.15, 0.20, 0.25]
-        _lowpass_rolloffs = [0, 6, 12, 18, 24, 30]
-        _highpass_rolloffs = [0, 6, 12, 18, 24, 30]
+        _lowpass_rolloffs = [6, 12, 18, 24, 30] # 0 (clean) will be added as first point
+        _highpass_rolloffs = [6, 12, 18, 24, 30]
         _pitch_semitones = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5]
         _time_masks_short = [(0, 0), (200, 7800), (200, 3800), (200, 1800), (200, 800), (200, 300)]
         _time_masks_long = [(0, 0), (500, 7500), (500, 3500), (500, 1500), (500, 1000), (500, 500)]
@@ -230,10 +230,6 @@ class CsvDataset(Dataset):
                 for mask_ms, unmask_ms in _time_masks_long
             ),
             *(
-                TimeStretch(min_rate=x, max_rate=x, leave_length_unchanged=False, p=1.0)
-                for x in _time_stretches
-            ),
-            *(
                 ShiftAddSNR(
                     min_snr_in_db=x,
                     max_snr_in_db=x,
@@ -242,6 +238,10 @@ class CsvDataset(Dataset):
                     p=1.0,
                 )
                 for x in _shift_add_snrs
+            ),
+            *(
+                TimeStretch(min_rate=x, max_rate=x, leave_length_unchanged=False, p=1.0)
+                for x in _time_stretches
             ),
         ]
 
@@ -260,8 +260,8 @@ class CsvDataset(Dataset):
             # *(f"spec_freq_mask_{x}" for x in range(len(_freq_mask_fracs))),
             *(f"time_mask_short_{x}" for x in range(len(_time_masks_short))),
             *(f"time_mask_long_{x}" for x in range(len(_time_masks_long))),
-            *("time_stretch_%02d" % x for x in range(len(_time_stretches))),
             *(f"shift_add_snr_{x}" for x in range(len(_shift_add_snrs))),
+            *("time_stretch_%02d" % x for x in range(len(_time_stretches))),
         ]
 
         assert len(self.corruptions) + 1 == len(self.corruption_names) # + clean

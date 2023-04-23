@@ -27,9 +27,11 @@ def main(input, xlsr_name, cpus):
         print("==================================")
     else:
         if "300m" in xlsr_name:
-            layers = [7,20]
+            # layers = [7,20]
+            layers = [5,21]
         else:
-            layers = [15,36]
+            # layers = [15,36]
+            layers = [10,41]
         layers_str = ",".join(str(x) for x in layers)
         print("==================================")
         print(f"Starting training {xlsr_name} layers {layers_str}")
