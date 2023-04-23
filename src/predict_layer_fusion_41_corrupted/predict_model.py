@@ -74,7 +74,7 @@ def _load_best_models(model_dir: Path, ds_idx: int):
     return best_models
 
 
-def _predict_model(split: Split, cpus: int):
+def _predict_model(split: Split, cpus: int, part: int, num_parts: int):
     split_name = str(split).lower().split(".")[1]
 
     # Device for model computations.
@@ -96,7 +96,7 @@ def _predict_model(split: Split, cpus: int):
         models[i] = models[i].to(device)
 
     # Create dataloader.
-    csv_dataset = CsvDataset(split)
+    csv_dataset = CsvDataset(split, part, num_parts)
 
     my_crop = MyCrop(FEAT_SEQ_LEN)
 
@@ -118,7 +118,9 @@ def _predict_model(split: Split, cpus: int):
 
     # Get corruption names.
     corruption_names = csv_dataset.corruption_names
+    all_corruption_names = csv_dataset.all_corruption_names
     num_corrupts = len(corruption_names)
+    num_all_corrupts = len(all_corruption_names)
 
     # Output path.
     dataset = constants.get_dataset(split, example=False, use_35=False)
@@ -145,6 +147,13 @@ def _predict_model(split: Split, cpus: int):
     dl = DataLoader(csv_dataset, batch_size=None, shuffle=False, num_workers=cpus-1)
 
 
+    # Skip last 11 (time stretching) with batching.
+    # ==> affects this partition?
+    _skip_last = 11
+    part_start = int(num_all_corrupts * part / num_parts)
+    part_end = int(num_all_corrupts * (part+1) / num_parts)
+    skip_last = max(0, _skip_last - (num_all_corrupts - part_end))
+
 
     # Iterate through data.
     print(f"Running inference for {len(csv_dataset)} audio files...")
@@ -165,7 +174,7 @@ def _predict_model(split: Split, cpus: int):
         # Batch as many as possible!
         xlsr_devs = []
         batch_size = 8
-        skip_last = 11 # time_stretching has different length
+        # skip_last = 11 # time_stretching has different length
         j = 0
         while j+batch_size <= num_corrupts-skip_last:
             exit_while = False
@@ -218,19 +227,22 @@ def _predict_model(split: Split, cpus: int):
             out_files[j][i].close()
 
 
-def predict_model(split: Split, cpus: int):
+def predict_model(split: Split, cpus: int, part: int, num_parts: int):
 
-    # Flag name. Make sure this operation is only performed once.
-    split_name = str(split).lower().split(".")[1]
-    flag_name = f"predicted_models_hybrid_fusion_41_{split_name}"
+    _predict_model(split, cpus, part, num_parts)
 
-    # Run exactly once.
-    with run_once(flag_name) as should_run:
-        if should_run:
-            _predict_model(split, cpus)
-        else:
-            print(
-                f"Prediction already made for hybrid fusion models on split {split_name}.")
+
+    # # Flag name. Make sure this operation is only performed once.
+    # split_name = str(split).lower().split(".")[1]
+    # flag_name = f"predicted_models_hybrid_fusion_41_{split_name}"
+
+    # # Run exactly once.
+    # with run_once(flag_name) as should_run:
+    #     if should_run:
+    #         _predict_model(split, cpus, part, num_parts)
+    #     else:
+    #         print(
+    #             f"Prediction already made for hybrid fusion models on split {split_name}.")
 
 
 if __name__ == "__main__":

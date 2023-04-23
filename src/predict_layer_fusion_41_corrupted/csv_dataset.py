@@ -90,11 +90,15 @@ class CsvDataset(Dataset):
     def __init__(
         self,
         split: Split,
+        part: int,
+        num_parts: int,
         skip_first: int = 0,
     ) -> None:
         super().__init__()
 
         self.split = split
+        self.part = part # partition splitting on ESAT
+        self.num_parts = num_parts 
         self.skip_first = skip_first
 
         # hopefully "point in room" test will not fail anymore
@@ -265,6 +269,18 @@ class CsvDataset(Dataset):
         ]
 
         assert len(self.corruptions) + 1 == len(self.corruption_names) # + clean
+
+        self.all_corruption_names = corruption_names
+        self.all_corruptions = all_corruptions
+
+        num_all_corrupts = len(self.all_corruption_names)
+
+
+        # partition definition:
+        part_start = int(num_all_corrupts * part / num_parts)
+        part_end = int(num_all_corrupts * (part+1) / num_parts)
+        self.corruptions = self.all_corruptions[part_start:part_end]
+        self.corruption_names = self.all_corruption_names[part_start:part_end]
 
     def __len__(self):
         return len(self.csv_data)
