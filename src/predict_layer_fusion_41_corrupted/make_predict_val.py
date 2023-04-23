@@ -10,13 +10,15 @@ from src.utils.split import Split
 
 @click.command()
 @click.option('-c', '--cpus', default=7)
-def main(cpus):
+@click.option('-p', '--part', default=0)
+@click.option('-n', '--num_parts', default=1)
+def main(cpus, part, num_parts):
     """Make model predictions on validation splits."""
     logger = logging.getLogger(__name__)
     logger.info('predicting model')
 
-    predict_model(Split.VAL, cpus)
-    predict_model(Split.VAL_SUBSET, cpus)
+    predict_model(Split.VAL, cpus, part, num_parts)
+    predict_model(Split.VAL_SUBSET, cpus, part, num_parts)
 
 
 if __name__ == '__main__':
