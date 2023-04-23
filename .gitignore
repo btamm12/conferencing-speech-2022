@@ -101,6 +101,7 @@ lightning_logs/
 
 # venv
 venv/
+venv36/
 
 /*.wav
 scratch
