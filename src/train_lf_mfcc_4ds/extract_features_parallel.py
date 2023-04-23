@@ -96,9 +96,13 @@ def _extract_features(
     split: Split, 
 ):
 
-    layers_300m = [7,20]
-    layers_1b = [15,36]
-    layers_2b = [15,36]
+    # layers_300m = [7,20]
+    # layers_1b = [15,36]
+    # layers_2b = [15,36]
+
+    layers_300m = [5,21]
+    layers_1b = [10,41]
+    layers_2b = [10,41]
 
     # For printing...
     split_name = str(split).lower().split(".")[1]
