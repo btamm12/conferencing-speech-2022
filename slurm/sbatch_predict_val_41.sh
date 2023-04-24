@@ -9,4 +9,4 @@
 
 # Run:
 # > slurm/submit_job.sh extract_val
-srun python_executable.sh "src/predict_layer_fusion_41_corrupted/make_predict_val.py"
+srun python_executable.sh "src/predict_layer_fusion_41_corrupted/make_predict_val.py -p 3 -n 4"

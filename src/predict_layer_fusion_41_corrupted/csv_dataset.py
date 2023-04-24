@@ -54,6 +54,8 @@ def load_audio(file_path: str, sampling_rate: int) -> torch.Tensor:
     array = np.float32(array)
     return array
 
+def clean(audio_np: np.ndarray, sample_rate: int):
+    return audio_np
 
 class MyCrop(torch.nn.Module):
     def __init__(self, seq_len: int) -> None:
@@ -191,6 +193,7 @@ class CsvDataset(Dataset):
 
         # AddGaussianSNR, Mp3Compression, RIR (different absorptions for 3 different sizes), SpecAugment (SpecFrequencyMask), TimeMask, TimeStretch, Shift + different SNR,
         corruptions: List[BaseTransform] = [
+            clean,
             *(
                 AddGaussianSNR(min_snr_in_db=x, max_snr_in_db=x, p=1.0)
                 for x in _gaussian_snrs
@@ -268,7 +271,7 @@ class CsvDataset(Dataset):
             *("time_stretch_%02d" % x for x in range(len(_time_stretches))),
         ]
 
-        assert len(corruptions) + 1 == len(corruption_names) # + clean
+        assert len(corruptions) == len(corruption_names)
 
         self.all_corruption_names = corruption_names
         self.all_corruptions = corruptions
@@ -300,14 +303,7 @@ class CsvDataset(Dataset):
         file_path: str = self.csv_data[index][0]
         audio_np = load_audio(full_path(file_path), sampling_rate=16_000)
         corrupted_inputs = []
-        inputs = self.feature_extractor(
-            audio_np,
-            sampling_rate=self.sampling_rate,
-            return_tensors="pt",
-        )
-        clean_input = inputs["input_values"]
-        corrupted_inputs.append(clean_input)
-        for transform in self.corruptions:
+        for transform in self.corruptions: # includes clean identity funcion
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 audio_np_corrupt = transform(audio_np, sample_rate=16000)
