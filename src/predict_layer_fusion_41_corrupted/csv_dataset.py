@@ -49,9 +49,13 @@ def _decode_non_mp3_file_like(file, new_sr):
     return array, sampling_rate
 
 
-def load_audio(file_path: str, sampling_rate: int) -> torch.Tensor:
+def load_audio(file_path: str, sampling_rate: int):
     array, _ = _decode_non_mp3_file_like(file_path, sampling_rate)
     array = np.float32(array)
+    eps = 1e-7
+    maxval = abs(array).max()
+    if maxval > 1.0 - eps:
+        array /= (maxval + eps)
     return array
 
 def clean(audio_np: np.ndarray, sample_rate: int):
