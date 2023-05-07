@@ -134,7 +134,7 @@ class Config():
             self.dim_head_in = self.dim_transformer # * self.feat_seq_len
             self.dim_head_out = 1
 
-        self.dropout = 0.0
+        self.dropout = 0.1 # NOTE: FIXED THIS AFTER BLIND SUBMISSION! (previously 0.0)
 
 TRAIN_ARGS = TrainConfig(
     max_epochs=30,

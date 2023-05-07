@@ -125,6 +125,13 @@ def transform_csv(in_path: Path, out_dir: Path, csv_info: CsvInfo):
             out_row.append(mos_std)
             out_row.append(mos_num_votes)
 
+            # 7. ACRs if available
+            if csv_info.col_ratings is not None:
+                acrs = str([round(x, 3) for x in mos_ratings])
+            else:
+                acrs = "NA"
+            out_row.append(acrs)
+
             # Append to output rows.
             out_rows.append(out_row)
 

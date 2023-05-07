@@ -37,6 +37,7 @@ class StandardizedCsvInfo:
     col_ds_name: int = 5
     col_mos_std: int = 6
     col_mos_num_votes: int = 7
+    col_acrs: int = 8
 
 
 STANDARDIZED_CSV_INFO = StandardizedCsvInfo()
@@ -49,4 +50,5 @@ STANDARDIZED_CSV_HEADER = [
     "ds_name",
     "mos_std",
     "mos_num_votes",
+    "col_acrs",
 ]

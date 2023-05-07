@@ -90,10 +90,10 @@ def _predict_models(split: Split, cpus: int):
     model_name_300m = "trained_model_lfds4_wav2vec2-xls-r-300m_5,21"
     model_name_1b = "trained_model_lfds4_wav2vec2-xls-r-1b_10,41"
     model_name_2b = "trained_model_lfds4_wav2vec2-xls-r-2b_10,41"
-    model_dir_mfcc = constants.MODELS_DIR.joinpath(model_name_mfcc)
-    model_dir_300m = constants.MODELS_DIR.joinpath(model_name_300m)
-    model_dir_1b = constants.MODELS_DIR.joinpath(model_name_1b)
-    model_dir_2b = constants.MODELS_DIR.joinpath(model_name_2b)
+    model_dir_mfcc = constants.MODELS_DIR.joinpath("__BLIND_SUBMISSION", model_name_mfcc + ".BLIND_SUBMISSION")
+    model_dir_300m = constants.MODELS_DIR.joinpath("__BLIND_SUBMISSION", model_name_300m + ".BLIND_SUBMISSION")
+    model_dir_1b = constants.MODELS_DIR.joinpath("__BLIND_SUBMISSION", model_name_1b + ".BLIND_SUBMISSION")
+    model_dir_2b = constants.MODELS_DIR.joinpath("__BLIND_SUBMISSION", model_name_2b + ".BLIND_SUBMISSION")
     models_mfcc = [
         _load_best_models("mfcc", model_dir_mfcc, ds_idx=0)[0],
         _load_best_models("mfcc", model_dir_mfcc, ds_idx=1)[0],

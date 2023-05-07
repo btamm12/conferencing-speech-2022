@@ -23,12 +23,12 @@ def visualize_6ds():
 
     # Load some data.
     paths = [
-        eval_input_dir.joinpath("6ds_val2iub","prediction_val_dnsmos.csv"),
-        eval_input_dir.joinpath("6ds_val2iub","prediction_val_mfcc_dstrain_1.csv"),
-        eval_input_dir.joinpath("6ds_val2iub","prediction_val_xlsr_1b_fusion_1_dstrain_1.csv"),
         eval_input_dir.joinpath("6ds_val2nisqa","prediction_val_dnsmos.csv"),
         eval_input_dir.joinpath("6ds_val2nisqa","prediction_val_mfcc_dstrain_1.csv"),
         eval_input_dir.joinpath("6ds_val2nisqa","prediction_val_xlsr_1b_fusion_1_dstrain_1.csv"),
+        eval_input_dir.joinpath("6ds_val2iub","prediction_val_dnsmos.csv"),
+        eval_input_dir.joinpath("6ds_val2iub","prediction_val_mfcc_dstrain_1.csv"),
+        eval_input_dir.joinpath("6ds_val2iub","prediction_val_xlsr_1b_fusion_1_dstrain_1.csv"),
     ]
     x_np_per_path = []
     y_np_per_path = []
@@ -63,10 +63,10 @@ def visualize_6ds():
 
     f1.suptitle("NISQA", fontweight="bold")
     f2.suptitle("IUB", fontweight="bold")
-    f1.supxlabel("Prediction")
-    f2.supxlabel("Prediction")
-    f1.supylabel("MOS")
-    f2.supylabel("MOS")
+    f1.supxlabel("MOS")
+    f2.supxlabel("MOS")
+    f1.supylabel("Prediction")
+    f2.supylabel("Prediction")
 
     for idx in range(len(all_ax)):
         _ax: plt.Axes = all_ax[idx]
@@ -122,7 +122,12 @@ def visualize_6ds():
 
     # plt.clf()
     # plt.imshow(heatmap.T, extent=extent, origin='lower')
-    out_path = img_dir / "mos-prediction-visualization.pdf"
+    _basename = "mos-prediction-visualization"
+    out_path = img_dir / f"{_basename}.pdf"
+    plt.savefig(out_path, bbox_inches='tight')
+    out_path = img_dir / f"{_basename}.png"
+    plt.savefig(out_path, bbox_inches='tight')
+    out_path = img_dir / f"{_basename}.svg"
     plt.savefig(out_path, bbox_inches='tight')
 
 if __name__ == "__main__":
