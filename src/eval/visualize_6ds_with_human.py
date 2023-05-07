@@ -138,12 +138,12 @@ def visualize_6ds_with_human():
 
     # extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
 
-    f1.suptitle("NISQA", fontweight="bold")
-    f2.suptitle("IUB", fontweight="bold")
-    f1.supxlabel("MOS")
-    f2.supxlabel("MOS")
-    f1.supylabel("Prediction")
-    f2.supylabel("Prediction")
+    f1.suptitle("NISQA", fontweight="bold", y=0.94)
+    f2.suptitle("IUB", fontweight="bold", y=0.94)
+    f1.supxlabel("MOS", y=0.06)
+    f2.supxlabel("MOS", y=0.06)
+    f1.supylabel("Prediction", x=0.04)
+    f2.supylabel("Prediction", x=0.06)
 
     bw_adj = 0.5
 
