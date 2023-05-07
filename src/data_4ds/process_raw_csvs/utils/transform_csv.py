@@ -1,4 +1,6 @@
+import ast
 import csv
+import numpy as np
 import os
 from pathlib import Path
 
@@ -98,6 +100,30 @@ def transform_csv(in_path: Path, out_dir: Path, csv_info: CsvInfo):
 
             # 4. Dataset name?
             out_row.append(str(csv_info.ds_name))
+
+            # 5. MOS std / 6. MOS num votes?
+            mos_std = None
+            mos_num_votes = None
+            if csv_info.col_ratings is not None:
+                mos_ratings = ast.literal_eval(in_row[csv_info.col_ratings])
+                # Apply mos transform.
+                if csv_info.mos_transform is not None:
+                    mos_ratings = [csv_info.mos_transform.transform(x) for x in mos_ratings]
+                mos_std = "%0.6f" % np.std(mos_ratings, ddof=1) # divide by (N-1)
+                mos_num_votes = str(len(mos_ratings))
+            else:
+                if csv_info.col_mos_std is not None:
+                    mos_std = in_row[csv_info.col_mos_std]
+                if csv_info.col_num_votes is not None:
+                    mos_num_votes = in_row[csv_info.col_num_votes]
+            both_none = mos_std is None and mos_num_votes is None
+            both_values = mos_std is not None and mos_num_votes is not None
+            assert both_none or both_values
+            if both_none:
+                mos_std = "-1"
+                mos_num_votes = "0"
+            out_row.append(mos_std)
+            out_row.append(mos_num_votes)
 
             # Append to output rows.
             out_rows.append(out_row)

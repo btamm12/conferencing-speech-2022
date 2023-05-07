@@ -28,11 +28,13 @@ def eval():
     in_dir = script_dir.joinpath("eval_input")
 
     for subdir in in_dir.iterdir():
+        print(f"Processing {subdir}")
         paths = list(subdir.iterdir())
         for csv_path in sorted(paths):
             # print(f"Processing {csv_path}")
             _eval(str(csv_path))
             # print("============================")
+        print("============================")
 
 if __name__ == "__main__":
     eval()

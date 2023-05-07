@@ -53,3 +53,9 @@ pydub
 pyroomacoustics
 
   
+# dnsmos
+onnxruntime
+
+# visualization
+matplotlib
+seaborn

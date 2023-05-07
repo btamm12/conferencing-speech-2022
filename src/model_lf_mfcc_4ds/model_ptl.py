@@ -37,6 +37,9 @@ class Model(pl.LightningModule):
             configs = [configs]
         self.configs = configs
         self.num_configs = len(configs)
+        # fix my bad code when loading from checkpoint
+        if "mfcc" in configs[0].name.lower() and num_layers == 1:
+            num_layers = None
         if num_layers is None:
             num_layers = 1
             self.num_layers = 1

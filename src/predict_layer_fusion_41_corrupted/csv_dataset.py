@@ -37,7 +37,6 @@ from src.utils.full_path import full_path
 def _decode_non_mp3_file_like(file, new_sr):
     # Source:
     # https://huggingface.co/docs/datasets/_modules/datasets/features/audio.html#Audio
-
     array, sampling_rate = sf.read(file)
     array = array.T
     array = librosa.to_mono(array)

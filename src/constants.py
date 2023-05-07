@@ -88,6 +88,7 @@ IU_BLOOMINGTON_TRAIN_CSVS = [
         ),
         in_subset=False, # Not in PSTN/Tencent subset
         ds_name="iub",
+        col_ratings=1,
     ) for x in (
         "audio_scaled_mos_cosine.csv",
         "audio_scaled_mos_voices.csv",
@@ -111,6 +112,8 @@ NISQA_TRAIN_CSVS = [
         col_mos=9,  # mos
         in_subset=False, # Not in PSTN/Tencent subset
         ds_name="nisqa",
+        col_mos_std=18,
+        col_num_votes=8,
     ) for x in (
         "NISQA_corpus_file.csv",
     )
@@ -130,6 +133,8 @@ PSTN_TRAIN_CSVS = [
         col_mos=1,  # mos
         in_subset=True, # In PSTN/Tencent subset
         ds_name="pstn",
+        col_mos_std=2,
+        col_num_votes=4,
     ) for x in (
         "pstn_train.csv",
     )
@@ -167,6 +172,8 @@ TENCENT_TRAIN_CSVS = [
         col_mos=1,  # mos
         in_subset=True, # In PSTN/Tencent subset
         ds_name="tencent",
+        col_mos_std=None,
+        col_num_votes=None,
     ) for x in (
         "withReverberationTrainDevMOS.csv",
         "withoutReverberationTrainDevMOS.csv",

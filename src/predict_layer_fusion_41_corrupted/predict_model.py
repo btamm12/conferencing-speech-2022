@@ -165,11 +165,11 @@ def _predict_model(split: Split, cpus: int, part: int, num_parts: int):
             for j in range(num_corrupts):
                 out_files[j][i].write("prediction" + "\n")
     for idx, (corrupted_xlsr_inputs, mos_norm) in enumerate(tqdm(dl)):
-        # for i in range(num_corrupts):
-        #     data = corrupted_xlsr_inputs[i].numpy().transpose()
-        #     scaled = np.int16(data / np.max(np.abs(data)) * 32767)
-        #     file_name = corruption_names[i] + ".wav"
-        #     write(file_name, 16000, scaled)
+        for i in range(num_corrupts):
+            data = corrupted_xlsr_inputs[i].numpy().transpose()
+            scaled = np.int16(data / np.max(np.abs(data)) * 32767)
+            file_name = corruption_names[i] + ".wav"
+            write(file_name, 16000, scaled)
         
         # Batch as many as possible!
         xlsr_devs = []
