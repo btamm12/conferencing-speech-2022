@@ -5,7 +5,7 @@
 #SBATCH --cpus-per-task=2
 #SBATCH --time=4-12:00:00
 #SBATCH --mem=8000M
-#SBATCH --gres=gpu_mem:8000
+#SBATCH --gres=gpu_mem:3000
 
 # Run:
 # > slurm/submit_job.sh extract_val

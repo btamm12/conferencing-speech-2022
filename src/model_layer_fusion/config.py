@@ -134,7 +134,7 @@ class Config():
             self.dim_head_in = self.dim_transformer # * self.feat_seq_len
             self.dim_head_out = 1
 
-        self.dropout = 0.0
+        self.dropout = 0.0 # NOTE: ACTUALLY BETTER THAN 0.1, 0.0 FOR BLIND SUBMISSION
 
 TRAIN_ARGS = TrainConfig(
     max_epochs=30,

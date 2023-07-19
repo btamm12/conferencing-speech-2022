@@ -23,8 +23,11 @@ def make_dataloader(
     cpus: int,
 ):
 
+    # Fix temporal alignment with random cropping (error present with blind submission)
+    fix_rnd_init = True
+
     # Create DataLoader.
-    csv_dataset = CsvDataset(feat_name, split, batch_size)
+    csv_dataset = CsvDataset(feat_name, split, batch_size, fix_rnd_init)
     csv_dataloader = DataLoader(
         csv_dataset,
         batch_size=batch_size,

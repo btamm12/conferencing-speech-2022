@@ -1,1 +1,9 @@
-*.csv
+eval_input
+eval_input.*
+ground_truths
+predictions/val/*.csv
+predictions/val_subset/*.csv
+predictions/val.paper_old
+predictions/val_subset.paper_old
+predictions
+predictions.*

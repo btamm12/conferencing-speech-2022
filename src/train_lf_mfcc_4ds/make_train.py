@@ -13,7 +13,7 @@ from src.utils_4ds.split import Split
 @click.command()
 @click.option('-i', '--input', default="xlsr")
 @click.option('-x', '--xlsr_name', default="wav2vec2-xls-r-2b")
-@click.option('-c', '--cpus', default=5)
+@click.option('-c', '--cpus', default=1)
 def main(input, xlsr_name, cpus):
     """Train models."""
     logger = logging.getLogger(__name__)

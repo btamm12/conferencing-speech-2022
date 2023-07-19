@@ -18,7 +18,9 @@ class CsvInfo:
     col_mos: int
     mos_transform: MosTransform = None
     in_subset: bool = False  # True if this CSV should be included in val_subset (only PSTN/Tencent).
-
+    col_mos_std: int = None
+    col_num_votes: int = None
+    col_ratings: int = None
 
 # STANDARDIZED FORMAT
 @dataclass
@@ -33,6 +35,9 @@ class StandardizedCsvInfo:
     col_norm_mos: int = 3
     col_in_subset: int = 4
     col_ds_name: int = 5
+    col_mos_std: int = 6
+    col_mos_num_votes: int = 7
+    col_acrs: int = 8
 
 
 STANDARDIZED_CSV_INFO = StandardizedCsvInfo()
@@ -43,4 +48,7 @@ STANDARDIZED_CSV_HEADER = [
     "norm_mos",
     "in_subset",
     "ds_name",
+    "mos_std",
+    "mos_num_votes",
+    "col_acrs",
 ]

@@ -14,9 +14,22 @@ from src.utils_4ds.full_path import full_path
 
 
 class MyCrop(torch.nn.Module):
-    def __init__(self, seq_len: int) -> None:
+    def __init__(self, seq_len: int, fix_rnd_init: bool = False) -> None:
         super().__init__()
         self.seq_len = seq_len
+        self.fix_rnd_init = fix_rnd_init
+
+    def rnd_init(self, x):
+        if x.dim() == 1:
+            x = x.unsqueeze(1)
+        assert x.dim() == 2
+
+        if x.size(0) > self.seq_len:
+            min_start_idx = 0
+            max_start_idx = x.size(0) - self.seq_len
+            self.start_idx = random.randint(min_start_idx, max_start_idx)
+        else:
+            self.start_idx = -1
 
     def forward(self, x):
         # Random crop.
@@ -28,9 +41,13 @@ class MyCrop(torch.nn.Module):
         assert x.dim() == 2
 
         if x.size(0) > self.seq_len:
-            min_start_idx = 0
-            max_start_idx = x.size(0) - self.seq_len
-            start_idx = random.randint(min_start_idx, max_start_idx)
+            if self.fix_rnd_init:
+                assert self.start_idx != -1, "self.rnd_init() returned start_idx == -1 when this shouldn't happen"
+                start_idx = self.start_idx
+            else:
+                min_start_idx = 0
+                max_start_idx = x.size(0) - self.seq_len
+                start_idx = random.randint(min_start_idx, max_start_idx)
             end_idx = start_idx + self.seq_len
             x = x[start_idx:end_idx, :]
         if x.size(0) < self.seq_len:
@@ -53,6 +70,7 @@ class CsvDataset(Dataset):
         feat_name: str, # "mfcc" or "xls-r-[SIZE]"
         split: Split,
         batch_size: int,
+        fix_rnd_init: bool = False,
     ) -> None:
         super().__init__()
 
@@ -113,7 +131,7 @@ class CsvDataset(Dataset):
 
         # Create transform.
         _seq_len = config.FEAT_SEQ_LEN
-        self.transform = MyCrop(_seq_len)
+        self.transform = MyCrop(_seq_len, fix_rnd_init)
 
         if feat_name == "mfcc":
             self.feat_cache = self._create_feat_cache()
@@ -145,6 +163,7 @@ class CsvDataset(Dataset):
         # Load features and convert to Tensor.
         file_path: str = self.csv_data[index][0]
         xlsr_states = torch.load(full_path(file_path)) # could also be MFCC, but I will [wrap this in brackets] ahead of time for consistency
+        self.transform.rnd_init(xlsr_states[0].squeeze(0))
         features = [self.transform(x.squeeze(0)) for x in xlsr_states]
         norm_mos = self.csv_data[index][2]
 
