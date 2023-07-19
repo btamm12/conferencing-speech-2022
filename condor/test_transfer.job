@@ -1,7 +1,7 @@
 Universe = vanilla
 RequestCpus = 2
 RequestMemory = 4G
-+RequestWalltime = 3600
++RequestWalltime = 20000
 request_GPUs = 0
 
 # GPU requirements.
