@@ -20,7 +20,7 @@ arguments  = "$(python_arg)"
 NiceUser   = false
 
 # Logging files.
-cmd_name = 'extract_features_parallel'
+cmd_name = extract_features_parallel
 log        = $(condordir)/out/$(cmd_name)_$(ClusterId).log
 output     = $(condordir)/out/$(cmd_name)_$(ClusterId).out
 error      = $(condordir)/out/$(cmd_name)_$(ClusterId).err

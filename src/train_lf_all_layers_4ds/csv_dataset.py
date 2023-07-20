@@ -163,7 +163,7 @@ class CsvDataset(Dataset):
             self.device = device
             
         
-        self.debug_N = 200
+        # self.debug_N = 200
 
 
         # NOTE!!
@@ -190,7 +190,8 @@ class CsvDataset(Dataset):
         print("Creating audio cache...")
         cache = []
 
-        _n = min(len(self.csv_data), self.debug_N)
+        # _n = min(len(self.csv_data), self.debug_N)
+        _n = len(self.csv_data)
         for index in tqdm(range(_n)):
             audio_path: str = self.csv_data[index][0]
             audio_np = load_audio(full_path(audio_path), sampling_rate=16_000)
@@ -208,9 +209,9 @@ class CsvDataset(Dataset):
         self.new_epoch()
 
     def __len__(self):
-        _n = min(len(self.csv_data), self.debug_N)
+        # _n = min(len(self.csv_data), self.debug_N)
+        _n = len(self.csv_data)
         return _n
-        # return len(self.csv_data)
 
     def _calc_xlsr(self, audio_np):
         inputs = self.feature_extractor(

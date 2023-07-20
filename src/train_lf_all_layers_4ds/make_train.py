@@ -9,7 +9,7 @@ from src.train_lf_all_layers_4ds.train_model import train_model
 @click.command()
 @click.option('-x', '--xlsr_name', default="wav2vec2-xls-r-2b")
 @click.option('-c', '--cpus', default=1)
-def main(input, xlsr_name, cpus):
+def main(xlsr_name, cpus):
     """Train models."""
     logger = logging.getLogger(__name__)
     logger.info('training model')
