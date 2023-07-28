@@ -139,7 +139,7 @@ class Config():
         self.dropout = 0.0 # NOTE: ACTUALLY BETTER THAN 0.1, 0.0 FOR BLIND SUBMISSION
 
 TRAIN_ARGS = TrainConfig(
-    max_epochs=30,
+    max_epochs=50,
     batch_size=2,
     grad_accum=30,
     default_lr=3e-3,
@@ -175,8 +175,8 @@ TRAIN_ARGS_PER_XLSR_SIZE: Dict[str, TrainConfig] = {
     ),
     "wav2vec2-xls-r-2b": TrainConfig(
         max_epochs=TRAIN_ARGS.max_epochs,
-        batch_size=4, # effective batch size 60 -> 24 GB VRAM
-        grad_accum=15,
+        batch_size=3, # effective batch size 60 -> 24 GB VRAM
+        grad_accum=20,
         default_lr=TRAIN_ARGS.default_lr,
         default_warmup_steps=TRAIN_ARGS.default_warmup_steps,
         default_weight_decay=TRAIN_ARGS.default_weight_decay,

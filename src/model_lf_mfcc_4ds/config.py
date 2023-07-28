@@ -153,7 +153,7 @@ class Config():
         self.dropout = 0.0 # NOTE: ACTUALLY BETTER THAN 0.1, 0.0 FOR BLIND SUBMISSION
 
 TRAIN_ARGS = TrainConfig(
-    max_epochs=30,
+    max_epochs=50,
     batch_size=15,
     grad_accum=4,
     default_lr=3e-3,
