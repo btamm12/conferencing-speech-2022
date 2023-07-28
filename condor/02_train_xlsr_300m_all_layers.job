@@ -1,0 +1,68 @@
+Universe = vanilla
+RequestCpus = 3
+RequestMemory = 115G
++RequestWalltime = 250000
+request_GPUs = 1
+
+# GPU requirements.
+requirements = (has_avx2 == True) && (GPUs_Capability >= 3.5)
+#requirements = $(REQUIREMENTS) && ((GPUs_GlobalMemoryMb >= 20000)||(CUDAGlobalMemoryMb >= 20000))
+#requirements = $(REQUIREMENTS) && ((GPUs_GlobalMemoryMb <= 25000)||(CUDAGlobalMemoryMb <= 25000))
+##requirements = $(REQUIREMENTS) && ((GPUs_GlobalMemoryMb >= 35000)||(CUDAGlobalMemoryMb >= 35000))
+requirements = $(REQUIREMENTS) && ((GPUs_GlobalMemoryMb >= 70000)||(CUDAGlobalMemoryMb >= 70000))
+
+# Executable arguments.
+python_arg = 'src/train_lf_all_layers_4ds/make_train.py -x wav2vec2-xls-r-300m -c 1'
+
+# Command to run.
+repodir    = /users/psi/btamm/GitHub/btamm12/conferencing-speech-2022
+condordir  = $(repodir)/condor
+initialdir = $(repodir)
+executable = $(condordir)/job_executable.sh
+arguments  = "$(python_arg)"
+NiceUser   = false
+
+# Logging files.
+cmd_name = train_lf4ds_xlsr_300m_all_layers
+log        = $(condordir)/out/$(cmd_name)_$(ClusterId).log
+output     = $(condordir)/out/$(cmd_name)_$(ClusterId).out
+error      = $(condordir)/out/$(cmd_name)_$(ClusterId).err
+
+
+# ------------------------------------------------------------------------ #
+#                  Also exclude bad host machines.
+# ------------------------------------------------------------------------ #
+# requirements = $(REQUIREMENTS) && (machine != "aristoteles.esat.kuleuven.be")
+
+# # ------------------------------------------------------------------------ #
+# #                  Also exclude bad host machines.
+# # ------------------------------------------------------------------------ #
+# 
+# # The following machines gave the following error:
+# # "Failed to open [path] as standard output: Permission denied (errno 13)"
+# requirements = $(REQUIREMENTS) && (machine != "munck.esat.kuleuven.be")
+# requirements = $(REQUIREMENTS) && (machine != "hansbrug.esat.kuleuven.be") 
+# requirements = $(REQUIREMENTS) && (machine != "ommegang.esat.kuleuven.be")
+# requirements = $(REQUIREMENTS) && (machine != "celestus.esat.kuleuven.be")
+# requirements = $(REQUIREMENTS) && (machine != "bavaro.esat.kuleuven.be")
+# 
+# # The following machines are "garbage" according to Wim.
+# requirements = $(REQUIREMENTS) && (machine != "etrog.esat.kuleuven.be") 
+# requirements = $(REQUIREMENTS) && (machine != "molder.esat.kuleuven.be")
+# requirements = $(REQUIREMENTS) && (machine != "askoy.esat.kuleuven.be")
+# 
+# # The following machine gave the the following HOLD reason:
+# # "Your job used 39358MB, more than the requested 14336MB"
+# requirements = $(REQUIREMENTS) && (machine != "fuji.esat.kuleuven.be")
+# 
+# # The following gave a shadow exception: Failed to open '.../download.out'
+# requirements = $(REQUIREMENTS) && (machine != "hawberry.esat.kuleuven.be")
+# requirements = $(REQUIREMENTS) && (machine != "audioslave.esat.kuleuven.be")
+# requirements = $(REQUIREMENTS) && (machine != "malachite.esat.kuleuven.be")
+# requirements = $(REQUIREMENTS) && (machine != "grape.esat.kuleuven.be")
+# requirements = $(REQUIREMENTS) && (machine != "gojira.esat.kuleuven.be")
+# requirements = $(REQUIREMENTS) && (machine != "fig.esat.kuleuven.be")
+# 
+# # ------------------------------------------------------------------------ #
+
+Queue
