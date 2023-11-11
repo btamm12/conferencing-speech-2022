@@ -139,7 +139,7 @@ class Config():
         self.dropout = 0.0 # NOTE: ACTUALLY BETTER THAN 0.1, 0.0 FOR BLIND SUBMISSION
 
 TRAIN_ARGS = TrainConfig(
-    max_epochs=30,
+    max_epochs=50,
     batch_size=2,
     grad_accum=30,
     default_lr=3e-3,
@@ -154,24 +154,29 @@ TRAIN_ARGS = TrainConfig(
 TRAIN_ARGS_PER_XLSR_SIZE: Dict[str, TrainConfig] = {
     "wav2vec2-xls-r-300m": TrainConfig(
         max_epochs=TRAIN_ARGS.max_epochs,
-        batch_size=1, # effective batch size 60 -> 24 GB VRAM
-        grad_accum=60,
+        # batch_size == 0 ~ 3.2GB
+        # batch_size == 1 ~ 7.5GB
+        # batch_size == 2 ~ 15.5GB
+        # batch_size == 3 ~ 20GB
+        # batch_size == 12 ~ 80GB hopefully
+        batch_size=12, # effective batch size 60
+        grad_accum=5,
         default_lr=TRAIN_ARGS.default_lr,
         default_warmup_steps=TRAIN_ARGS.default_warmup_steps,
         default_weight_decay=TRAIN_ARGS.default_weight_decay,
     ),
     "wav2vec2-xls-r-1b": TrainConfig(
         max_epochs=TRAIN_ARGS.max_epochs,
-        batch_size=1, # effective batch size 60 -> 24 GB VRAM
-        grad_accum=60,
+        batch_size=5, # effective batch size 60 -> 24 GB VRAM
+        grad_accum=12,
         default_lr=TRAIN_ARGS.default_lr,
         default_warmup_steps=TRAIN_ARGS.default_warmup_steps,
         default_weight_decay=TRAIN_ARGS.default_weight_decay,
     ),
     "wav2vec2-xls-r-2b": TrainConfig(
         max_epochs=TRAIN_ARGS.max_epochs,
-        batch_size=1, # effective batch size 60 -> 24 GB VRAM
-        grad_accum=60,
+        batch_size=3, # effective batch size 60 -> 24 GB VRAM
+        grad_accum=20,
         default_lr=TRAIN_ARGS.default_lr,
         default_warmup_steps=TRAIN_ARGS.default_warmup_steps,
         default_weight_decay=TRAIN_ARGS.default_weight_decay,

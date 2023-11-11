@@ -157,6 +157,9 @@ class CsvDataset(Dataset):
             print("Reusing existing XLS-R model.")
             self.xlsr_model = xlsr_model
             self.device = device
+            
+        
+        # self.debug_N = 200
 
         self.debug_N = 100
 
@@ -203,9 +206,9 @@ class CsvDataset(Dataset):
         self.new_epoch()
 
     def __len__(self):
-        _n = min(len(self.csv_data), self.debug_N)
+        # _n = min(len(self.csv_data), self.debug_N)
+        _n = len(self.csv_data)
         return _n
-        # return len(self.csv_data)
 
     def _calc_xlsr(self, audio_np):
         inputs = self.feature_extractor(
@@ -225,7 +228,7 @@ class CsvDataset(Dataset):
         if use_cache:
             audio_np = self.audio_cache[index]
         else:
-            audio_path: str = self.csv_data[index][0]
+            audio_path: str = self.csv_data[index]tter has elem[0]
             audio_np = load_audio(full_path(audio_path), sampling_rate=16_000)
         xlsr_states = self._calc_xlsr(audio_np)
         self.transform.rnd_init(xlsr_states[0].squeeze(0))

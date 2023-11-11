@@ -402,7 +402,7 @@ class Model(pl.LightningModule):
             return
 
         _mean_loss_per_model = [
-            self.sum_train_losses[i] / self.num_train_losses[i]
+            self.sum_val_losses[i] / self.num_val_losses[i]
             for i in range(self.num_models)
         ]
         _mean_loss_per_model = torch.stack(_mean_loss_per_model, dim=0)

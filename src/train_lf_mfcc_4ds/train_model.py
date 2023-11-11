@@ -21,13 +21,14 @@ def make_dataloader(
     batch_size: int,
     split: Split,
     cpus: int,
+    use_localsym: bool,
 ):
 
     # Fix temporal alignment with random cropping (error present with blind submission)
     fix_rnd_init = True
 
     # Create DataLoader.
-    csv_dataset = CsvDataset(feat_name, split, batch_size, fix_rnd_init)
+    csv_dataset = CsvDataset(feat_name, split, batch_size, fix_rnd_init, use_localsym)
     csv_dataloader = DataLoader(
         csv_dataset,
         batch_size=batch_size,
@@ -45,6 +46,7 @@ def _train_model(
     layers: List[int],
     cpus: int,
     force_rezip: bool = False,
+    use_localsym: bool = False,
 ):
 
     # If something went wrong and we need to restart the job pipeline...
@@ -80,8 +82,8 @@ def _train_model(
 
     # Create dataloader(s).
     _feat_name = "mfcc" if input == "mfcc" else xlsr_name
-    train_dl = make_dataloader(_feat_name, _train_args.batch_size, Split.TRAIN, cpus)
-    val_dl = make_dataloader(_feat_name, _train_args.batch_size, Split.VAL, cpus)
+    train_dl = make_dataloader(_feat_name, _train_args.batch_size, Split.TRAIN, cpus, use_localsym)
+    val_dl = make_dataloader(_feat_name, _train_args.batch_size, Split.VAL, cpus, use_localsym)
 
     all_ckpt_callback = ModelCheckpoint(
         dirpath=str(model_dir),
@@ -142,6 +144,7 @@ def train_model(
     layers: List[int],
     cpus: int,
     force_rezip: bool = False,
+    use_localsym: bool = False,
 ):
 
     # Flag name. Make sure this operation is only performed once.
@@ -160,6 +163,7 @@ def train_model(
                 layers,
                 cpus,
                 force_rezip=force_rezip,
+                use_localsym=use_localsym,
             )
         else:
             print(f"Model already trained: {flag_name}.")
@@ -179,4 +183,5 @@ if __name__ == "__main__":
         layers,
         cpus,
         force_rezip=False,
+        use_localsym=False,
     )

@@ -1,31 +1,36 @@
 Universe = vanilla
 RequestCpus = 4
 RequestMemory = 20G
-+RequestWalltime = 140000
++RequestWalltime = 250000
 request_GPUs = 1
 
 # GPU requirements.
-requirements = (has_avx2 == True) && (GPUs_Capability >= 3.5)
-requirements = $(REQUIREMENTS) && ((GPUs_GlobalMemoryMb >= 20000)||(CUDAGlobalMemoryMb >= 20000))
+#requirements = (has_avx2 == True) && (GPUs_Capability >= 3.5)
+#requirements = (has_avx2 == True)
+#requirements = $(REQUIREMENTS) && ((GPUs_GlobalMemoryMb >= 10000)||(CUDAGlobalMemoryMb >= 10000))
 
 # Executable arguments.
-python_arg = 'src/train_lf_mfcc_4ds/extract_features_parallel.py'
+python_arg = 'src/train_lf_mfcc_4ds/make_train.py -i xlsr -x wav2vec2-xls-r-2b -c 1 --use_localsym'
 
 # Command to run.
 repodir    = /users/psi/btamm/GitHub/btamm12/conferencing-speech-2022
 condordir  = $(repodir)/condor
 initialdir = $(repodir)
-executable = $(condordir)/job_executable.sh
+executable = $(condordir)/job_executable_copyfeat_v2_2b.sh
 arguments  = "$(python_arg)"
 NiceUser   = false
 
 # Logging files.
-cmd_name = extract_features_parallel
+cmd_name = train_lf4ds_xlsr_2b_copyfeat
 log        = $(condordir)/out/$(cmd_name)_$(ClusterId).log
 output     = $(condordir)/out/$(cmd_name)_$(ClusterId).out
 error      = $(condordir)/out/$(cmd_name)_$(ClusterId).err
 
 
+# ------------------------------------------------------------------------ #
+#                  Also exclude bad host machines.
+# ------------------------------------------------------------------------ #
+requirements = (machine == "avocado.esat.kuleuven.be")
 
 # # ------------------------------------------------------------------------ #
 # #                  Also exclude bad host machines.

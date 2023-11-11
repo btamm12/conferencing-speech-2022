@@ -1,4 +1,5 @@
 import csv
+import os
 import random
 import torch
 from torch import Tensor
@@ -71,6 +72,7 @@ class CsvDataset(Dataset):
         split: Split,
         batch_size: int,
         fix_rnd_init: bool = False,
+        use_localsym: bool = False,
     ) -> None:
         super().__init__()
 
@@ -111,6 +113,24 @@ class CsvDataset(Dataset):
                 # Save feature_path, norm_mos
                 file_path: str = in_row[col_path]
                 file_path = file_path % feat_name # contains %s dir for input name
+                # NEW FORMAT: local_sym_banana_slot1_1
+                _file_path = file_path
+                if use_localsym:
+                    _machine = os.environ["HOSTNAME"].split(".")[0]
+                    _condor_slot = os.environ["_CONDOR_SLOT"]
+                    _sym_id = f"{_machine}_{_condor_slot}"
+                    _file_path = _file_path.replace("processed/train/features", f"processed/train/features_localsym_{_sym_id}")
+                    _file_path = _file_path.replace("processed/val/features", f"processed/val/features_localsym_{_sym_id}")
+                    _full_path = full_path(_file_path)
+                    # OLD FORMAT: local_sym (only 1 job simultaneously)
+                    if not os.path.exists(_full_path):
+                        _file_path = file_path
+                        _file_path = _file_path.replace("processed/train/features", "processed/train/features_localsym")
+                        _file_path = _file_path.replace("processed/val/features", "processed/val/features_localsym")
+                        _full_path = full_path(_file_path)
+                        if not os.path.exists(_full_path):
+                            raise Exception(f"Path does not exist: {_full_path}")
+                    file_path = _file_path
                 in_subset: bool = in_row[col_subset] == "True"
                 norm_mos = torch.tensor(float(in_row[col_mos]))
                 self.csv_data.append([file_path, in_subset, norm_mos])
