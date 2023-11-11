@@ -46,55 +46,63 @@ if __name__ == "__main__":
     # MFCC
     print("Converting MFCC models.")
     _config = MFCC_TRANSFORMER_32DEEP_CONFIG
-    src_dir = model_dir + "original/mfcc/"
-    dst_dir = model_dir + "sqa/mfcc/"
-    for _name in ["_model_mfcc_full.pt", "_model_mfcc_subset.pt"]:
+    # src_dir = model_dir + "original/mfcc/"
+    # dst_dir = model_dir + "sqa/mfcc/"
+    src_dir = model_dir + "original-v2/mfcc/"
+    dst_dir = model_dir + "sqa-v2/mfcc/"
+    for _name in ["model_mfcc_full.pt", "model_mfcc_subset.pt"]:
         _model = load_model(src_dir + _name, _config, 0)
-        torch.save(_model.state_dict(), dst_dir + _name[1:])
+        torch.save(_model.state_dict(), dst_dir + _name)
 
     # XLS-R 300M
     print("Converting XLS-R 300M models.")
     _config = XLSR_300M_TRANSFORMER_32DEEP_CONFIG
-    src_dir = model_dir + "original/xls-r-300m/"
-    dst_dir = model_dir + "sqa/xls-r-300m/"
-    for _name in ["_model_300m_lay5_full.pt", "_model_300m_lay5_subset.pt"]:
+    # src_dir = model_dir + "original/xls-r-300m/"
+    # dst_dir = model_dir + "sqa/xls-r-300m/"
+    src_dir = model_dir + "original-v2/xls-r-300m/"
+    dst_dir = model_dir + "sqa-v2/xls-r-300m/"
+    for _name in ["model_300m_lay5_full.pt", "model_300m_lay5_subset.pt"]:
         _model = load_model(src_dir + _name, _config, 0)
-        torch.save(_model.state_dict(), dst_dir + _name[1:])
-    for _name in ["_model_300m_lay21_full.pt", "_model_300m_lay21_subset.pt"]:
+        torch.save(_model.state_dict(), dst_dir + _name)
+    for _name in ["model_300m_lay21_full.pt", "model_300m_lay21_subset.pt"]:
         _model = load_model(src_dir + _name, _config, 1)
-        torch.save(_model.state_dict(), dst_dir + _name[1:])
-    for _name in ["_model_300m_fusion_full.pt", "_model_300m_fusion_subset.pt"]:
+        torch.save(_model.state_dict(), dst_dir + _name)
+    for _name in ["model_300m_fusion_full.pt", "model_300m_fusion_subset.pt"]:
         _model = load_fusion_model(src_dir + _name, _config)
-        torch.save(_model.state_dict(), dst_dir + _name[1:])
+        torch.save(_model.state_dict(), dst_dir + _name)
 
     # XLS-R 1B
     print("Converting XLS-R 1B models.")
     _config = XLSR_1B_TRANSFORMER_32DEEP_CONFIG
-    src_dir = model_dir + "original/xls-r-1b/"
-    dst_dir = model_dir + "sqa/xls-r-1b/"
-    for _name in ["_model_1b_lay10_full.pt", "_model_1b_lay10_subset.pt"]:
+    # src_dir = model_dir + "original/xls-r-1b/"
+    # dst_dir = model_dir + "sqa/xls-r-1b/"
+    src_dir = model_dir + "original-v2/xls-r-1b/"
+    dst_dir = model_dir + "sqa-v2/xls-r-1b/"
+    for _name in ["model_1b_lay10_full.pt", "model_1b_lay10_subset.pt"]:
         _model = load_model(src_dir + _name, _config, 0)
-        torch.save(_model.state_dict(), dst_dir + _name[1:])
-    for _name in ["_model_1b_lay41_full.pt", "_model_1b_lay41_subset.pt"]:
+        torch.save(_model.state_dict(), dst_dir + _name)
+    for _name in ["model_1b_lay41_full.pt", "model_1b_lay41_subset.pt"]:
         _model = load_model(src_dir + _name, _config, 1)
-        torch.save(_model.state_dict(), dst_dir + _name[1:])
-    for _name in ["_model_1b_fusion_full.pt", "_model_1b_fusion_subset.pt"]:
+        torch.save(_model.state_dict(), dst_dir + _name)
+    for _name in ["model_1b_fusion_full.pt", "model_1b_fusion_subset.pt"]:
         _model = load_fusion_model(src_dir + _name, _config)
-        torch.save(_model.state_dict(), dst_dir + _name[1:])
+        torch.save(_model.state_dict(), dst_dir + _name)
 
     # XLS-R 2B
     print("Converting XLS-R 2B models.")
     _config = XLSR_2B_TRANSFORMER_32DEEP_CONFIG
-    src_dir = model_dir + "original/xls-r-2b/"
-    dst_dir = model_dir + "sqa/xls-r-2b/"
-    for _name in ["_model_2b_lay10_full.pt", "_model_2b_lay10_subset.pt"]:
+    # src_dir = model_dir + "original/xls-r-2b/"
+    # dst_dir = model_dir + "sqa/xls-r-2b/"
+    src_dir = model_dir + "original-v2/xls-r-2b/"
+    dst_dir = model_dir + "sqa-v2/xls-r-2b/"
+    for _name in ["model_2b_lay10_full.pt", "model_2b_lay10_subset.pt"]:
         _model = load_model(src_dir + _name, _config, 0)
-        torch.save(_model.state_dict(), dst_dir + _name[1:])
-    for _name in ["_model_2b_lay41_full.pt", "_model_2b_lay41_subset.pt"]:
+        torch.save(_model.state_dict(), dst_dir + _name)
+    for _name in ["model_2b_lay41_full.pt", "model_2b_lay41_subset.pt"]:
         _model = load_model(src_dir + _name, _config, 1)
-        torch.save(_model.state_dict(), dst_dir + _name[1:])
-    for _name in ["_model_2b_fusion_full.pt", "_model_2b_fusion_subset.pt"]:
+        torch.save(_model.state_dict(), dst_dir + _name)
+    for _name in ["model_2b_fusion_full.pt", "model_2b_fusion_subset.pt"]:
         _model = load_fusion_model(src_dir + _name, _config)
-        torch.save(_model.state_dict(), dst_dir + _name[1:])
+        torch.save(_model.state_dict(), dst_dir + _name)
 
 

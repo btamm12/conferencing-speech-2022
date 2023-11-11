@@ -98,10 +98,12 @@ def visualize_6ds_with_human():
     paths = [
         eval_input_dir.joinpath("6ds_val2nisqa","prediction_val_dnsmos.csv"),
         eval_input_dir.joinpath("6ds_val2nisqa","prediction_val_mfcc_dstrain_1.csv"),
-        eval_input_dir.joinpath("6ds_val2nisqa","prediction_val_xlsr_1b_fusion_1_dstrain_1.csv"),
+        # eval_input_dir.joinpath("6ds_val2nisqa","prediction_val_xlsr_1b_fusion_1_dstrain_1.csv"),
+        eval_input_dir.joinpath("6ds_val2nisqa","prediction_val_xlsr_2b_fusion_0_dstrain_1.csv"),
         eval_input_dir.joinpath("6ds_val2iub","prediction_val_dnsmos.csv"),
         eval_input_dir.joinpath("6ds_val2iub","prediction_val_mfcc_dstrain_1.csv"),
-        eval_input_dir.joinpath("6ds_val2iub","prediction_val_xlsr_1b_fusion_1_dstrain_1.csv"),
+        # eval_input_dir.joinpath("6ds_val2iub","prediction_val_xlsr_1b_fusion_1_dstrain_1.csv"),
+        eval_input_dir.joinpath("6ds_val2iub","prediction_val_xlsr_2b_fusion_0_dstrain_1.csv"),
     ]
     x_np_per_path = []
     y_np_per_path = []
@@ -129,8 +131,10 @@ def visualize_6ds_with_human():
     (ax4, ax5, ax6, ax7) = gs2.subplots(sharex="col", sharey="row")
 
     all_ax = [ax1, ax2, ax3, ax4, ax5, ax6, ax7]
-    titles = ["DNSMOS", "MFCC", "XLS-R 1B Layer41"]
-    titles += ["DNSMOS", "MFCC", "XLS-R 1B Layer41", "Human"]
+    # titles = ["DNSMOS", "MFCC", "XLS-R 1B Layer41"]
+    # titles += ["DNSMOS", "MFCC", "XLS-R 1B Layer41", "Human"]
+    titles = ["DNSMOS", "MFCC", "XLS-R 2B Layer10"]
+    titles += ["DNSMOS", "MFCC", "XLS-R 2B Layer10", "Human"]
     
     # heatmap, xedges, yedges = np.histogram2d(x_np, y_np, bins=60, range=[[1,5],[1,5]])
 

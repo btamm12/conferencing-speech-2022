@@ -17,6 +17,7 @@ from src.utils_4ds.split import Split, SUBSET_SPLITS
 from src.utils_4ds.csv_info import STANDARDIZED_CSV_INFO
 from src.utils_4ds.full_path import full_path
 
+
 def _decode_non_mp3_file_like(file, new_sr):
     # Source:
     # https://huggingface.co/docs/datasets/_modules/datasets/features/audio.html#Audio
@@ -26,10 +27,7 @@ def _decode_non_mp3_file_like(file, new_sr):
     array = librosa.to_mono(array)
     if new_sr and new_sr != sampling_rate:
         array = librosa.resample(
-            array,
-            orig_sr=sampling_rate,
-            target_sr=new_sr,
-            res_type="kaiser_best"
+            array, orig_sr=sampling_rate, target_sr=new_sr, res_type="kaiser_best"
         )
         sampling_rate = new_sr
     return array, sampling_rate
@@ -59,7 +57,6 @@ class MyCrop(torch.nn.Module):
         else:
             self.start_idx = -1
 
-
     def forward(self, x):
         assert self.start_idx is not None, "self.rnd_init() not called!"
 
@@ -71,15 +68,17 @@ class MyCrop(torch.nn.Module):
         assert x.dim() == 2
 
         if x.size(0) > self.seq_len:
-            assert self.start_idx != -1, "self.rnd_init() returned start_idx == -1 when this shouldn't happen"
+            assert (
+                self.start_idx != -1
+            ), "self.rnd_init() returned start_idx == -1 when this shouldn't happen"
             start_idx = self.start_idx
             end_idx = start_idx + self.seq_len
             x = x[start_idx:end_idx, :]
         if x.size(0) < self.seq_len:
             to_pad = self.seq_len - x.size(0)
-            xT = x.transpose(0,1)
+            xT = x.transpose(0, 1)
             xT = pad(xT, (0, to_pad), mode="constant", value=0.0)
-            x = xT.transpose(0,1)
+            x = xT.transpose(0, 1)
 
         if unsqueezed:
             x = x.squeeze(1)
@@ -87,12 +86,10 @@ class MyCrop(torch.nn.Module):
         return x
 
 
-
 class CsvDataset(Dataset):
-
     def __init__(
         self,
-        feat_name: str, # "mfcc" or "xls-r-[SIZE]"
+        feat_name: str,  # "mfcc" or "xls-r-[SIZE]"
         split: Split,
         batch_size: int,
         xlsr_model=None,
@@ -102,7 +99,7 @@ class CsvDataset(Dataset):
 
         self.feat_name = feat_name
         self.split = split
-        self.batch_size = batch_size # for hacky caching of subset features
+        self.batch_size = batch_size  # for hacky caching of subset features
 
         # For printing...
         split_name = str(split).lower().split(".")[1]
@@ -136,7 +133,6 @@ class CsvDataset(Dataset):
                 norm_mos = torch.tensor(float(in_row[col_mos]))
                 self.csv_data.append([audio_path, in_subset, norm_mos])
 
-
         # wav2vec2 feature extractor + model
         SAMPLING_RATE = 16000
         self.sampling_rate = SAMPLING_RATE
@@ -145,7 +141,7 @@ class CsvDataset(Dataset):
             sampling_rate=SAMPLING_RATE,
             padding_value=0.0,
             do_normalize=True,
-            return_attention_mask=True
+            return_attention_mask=True,
         )
 
         if xlsr_model is None:
@@ -161,10 +157,8 @@ class CsvDataset(Dataset):
             print("Reusing existing XLS-R model.")
             self.xlsr_model = xlsr_model
             self.device = device
-            
-        
-        self.debug_N = 200
 
+        self.debug_N = 100
 
         # NOTE!!
         # This code assumes num_workers == 1 in the dataloader!
@@ -179,7 +173,6 @@ class CsvDataset(Dataset):
 
         self.batch_counter = 0
 
-
         # Create transform.
         _seq_len = config.FEAT_SEQ_LEN
         self.transform = MyCrop(_seq_len)
@@ -190,14 +183,16 @@ class CsvDataset(Dataset):
         print("Creating audio cache...")
         cache = []
 
-        _n = min(len(self.csv_data), self.debug_N)
+        _n = len(self.csv_data)
+        # if len(self.csv_data) > 100000:
+        #     _n = self.debug_N
+        # _n = min(len(self.csv_data), self.debug_N)
         for index in tqdm(range(_n)):
             audio_path: str = self.csv_data[index][0]
             audio_np = load_audio(full_path(audio_path), sampling_rate=16_000)
             cache.append(audio_np)
         print("Done.")
         return cache
-
 
     def new_epoch(self):
         self.batch_counter = 0
@@ -226,7 +221,6 @@ class CsvDataset(Dataset):
 
         return xlsr_output.hidden_states
 
-
     def _getitem_impl(self, index: int, use_cache: bool = True):
         if use_cache:
             audio_np = self.audio_cache[index]
@@ -244,7 +238,6 @@ class CsvDataset(Dataset):
         features, norm_mos = result
         return [f.clone() for f in features], norm_mos.clone()
 
-
     def __getitem__(self, index) -> Tuple[Tensor, Tensor]:
         if self.batch_counter == 0:
             self.new_epoch()
@@ -254,13 +247,13 @@ class CsvDataset(Dataset):
         _in_subset = self.csv_data[index][1]
         if _in_subset:
             self.subset_buffer.append(self._clone(result_full))
-        
+
         # Move n_batch samples from the buffer to the emitter at the start of a batch
         # (if the buffer has enough samples).
         _start_of_batch = self.batch_counter % self.batch_size == 0
         if _start_of_batch and len(self.subset_buffer) >= self.batch_size:
-            to_emit = self.subset_buffer[:self.batch_size]
-            self.subset_buffer = self.subset_buffer[self.batch_size:]
+            to_emit = self.subset_buffer[: self.batch_size]
+            self.subset_buffer = self.subset_buffer[self.batch_size :]
             self.subset_emitter.extend(to_emit)
 
         # Emit samples while the emitter has elements.

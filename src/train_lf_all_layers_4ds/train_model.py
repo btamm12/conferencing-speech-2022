@@ -7,7 +7,10 @@ from torch.utils.data import DataLoader
 from typing import List
 
 from src import constants
-from src.model_lf_all_layers_4ds.config import CONFIGS_PER_XLSR_SIZE, TRAIN_ARGS_PER_XLSR_SIZE
+from src.model_lf_all_layers_4ds.config import (
+    CONFIGS_PER_XLSR_SIZE,
+    TRAIN_ARGS_PER_XLSR_SIZE,
+)
 from src.model_lf_all_layers_4ds.model_ptl import Model
 from src.train_lf_all_layers_4ds.csv_dataset import CsvDataset
 from src.utils_4ds.run_once import run_once
@@ -19,8 +22,8 @@ def make_dataloader(
     batch_size: int,
     split: Split,
     cpus: int,
-    xlsr_model = None,
-    device = None,
+    xlsr_model=None,
+    device=None,
 ):
 
     # Create DataLoader.
@@ -29,9 +32,9 @@ def make_dataloader(
         csv_dataset,
         batch_size=batch_size,
         shuffle=True,
-        num_workers=cpus-1,
+        num_workers=cpus - 1,
         persistent_workers=(cpus > 1),
-        prefetch_factor=4 if (cpus > 1) else 2, # (default 2)
+        prefetch_factor=4 if (cpus > 1) else 2,  # (default 2)
     )
     return csv_dataloader, csv_dataset.xlsr_model, csv_dataset.device
 
@@ -54,11 +57,14 @@ def _train_model(
     # Train args.
     _train_args = TRAIN_ARGS_PER_XLSR_SIZE[xlsr_name]
 
-
     # Create dataloader(s).
     _feat_name = xlsr_name
-    train_dl, xlsr_model, device = make_dataloader(_feat_name, _train_args.batch_size, Split.TRAIN, cpus)
-    val_dl, _, _ = make_dataloader(_feat_name, _train_args.batch_size, Split.VAL, cpus, xlsr_model, device)
+    train_dl, xlsr_model, device = make_dataloader(
+        _feat_name, _train_args.batch_size, Split.TRAIN, cpus
+    )
+    val_dl, _, _ = make_dataloader(
+        _feat_name, _train_args.batch_size, Split.VAL, cpus, xlsr_model, device
+    )
 
     all_ckpt_callback = ModelCheckpoint(
         dirpath=str(model_dir),
@@ -95,22 +101,21 @@ def _train_model(
         # Find max epoch path .
         stems = [os.path.splitext(os.path.basename(str(x)))[0] for x in ckpt_paths]
         parts_per_stem = [x.split("-") for x in stems]
-        dict_per_stem = [{p.split("=")[0]: p.split("=")[1]
-                        for p in parts if "=" in p} for parts in parts_per_stem]
+        dict_per_stem = [
+            {p.split("=")[0]: p.split("=")[1] for p in parts if "=" in p}
+            for parts in parts_per_stem
+        ]
         epoch_per_stem = [x["epoch"] for x in dict_per_stem]
-        max_idx = max(range(len(epoch_per_stem)),
-                        key=epoch_per_stem.__getitem__)
+        max_idx = max(range(len(epoch_per_stem)), key=epoch_per_stem.__getitem__)
         ckpt_path = ckpt_paths[max_idx]
     else:
         ckpt_path = None
-    
 
     # Start main operation:
     if ckpt_path is not None:
         trainer.fit(model, train_dl, val_dl, ckpt_path=str(ckpt_path))
     else:
         trainer.fit(model, train_dl, val_dl)
-
 
 
 def train_model(

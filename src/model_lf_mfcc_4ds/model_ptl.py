@@ -10,6 +10,7 @@ from src.model_lf_mfcc_4ds.config import TRAIN_ARGS_MFCC, TRAIN_ARGS_PER_XLSR_SI
 from src.model_lf_mfcc_4ds.model_pt import FusionModel
 from src.train.csv_dataset import CsvDataset
 
+
 def ds_to_str(ds_idx: int):
     assert ds_idx >= 0 and ds_idx < 6
     datasets = [
@@ -23,13 +24,11 @@ def ds_to_str(ds_idx: int):
     return datasets[ds_idx]
 
 
-
 class Model(pl.LightningModule):
-
     def __init__(
         self,
         configs: Union[Config, List[Config]],
-        num_layers: int, # None for MFCC and normally 2 for XLS-R
+        num_layers: int,  # None for MFCC and normally 2 for XLS-R
         out_csv_path: Path,
     ):
         super().__init__()
@@ -43,12 +42,11 @@ class Model(pl.LightningModule):
         if num_layers is None:
             num_layers = 1
             self.num_layers = 1
-            self.num_fusions = 1 # only main output, no extra fusion
+            self.num_fusions = 1  # only main output, no extra fusion
         else:
             self.num_layers = num_layers
             # self.num_fusions = num_layers + 2 # main outputs + 2 fusion paradigms
-            self.num_fusions = num_layers + 1 # only sum of inputs paradigm (better)
-
+            self.num_fusions = num_layers + 1  # only sum of inputs paradigm (better)
 
         _input = configs[0].input
         _xlsr_name = configs[0].xlsr_name
@@ -57,7 +55,9 @@ class Model(pl.LightningModule):
             print(f"> {configs[idx].name}")
             # Check that all XLS-R names are the same.
             if configs[idx].input != _input:
-                raise Exception("All configs must have the same Input type (MFCC / XLSR).")
+                raise Exception(
+                    "All configs must have the same Input type (MFCC / XLSR)."
+                )
             if configs[idx].xlsr_name != _xlsr_name:
                 raise Exception("All configs must be based on same XLS-R model size.")
         self.input = _input
@@ -67,9 +67,10 @@ class Model(pl.LightningModule):
         else:
             self.train_args = TRAIN_ARGS_PER_XLSR_SIZE[self.xlsr_name]
         self.grad_accum = self.train_args.grad_accum
-        self.num_ds = 2 # all + challenge subset... adding more is too much I/O bottleneck
+        self.num_ds = (
+            2  # all + challenge subset... adding more is too much I/O bottleneck
+        )
         # self.num_ds = 6 # 4ds + challenge_subset + all
-
 
         # Needed to configure learning rate.
         # See: training_step()
@@ -108,12 +109,12 @@ class Model(pl.LightningModule):
         self.full_global_step = None
         self.subset_global_step = None
 
-        # Create CSV if it doesn't exist. We will append it every epoch.
-        HEADER = ["epoch", "input", "loop", "dataset", "config_idx", "fusion_idx", "loss"]
-        if not out_csv_path.exists():
-            out_csv_path.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
-            with open(out_csv_path, mode="w") as f:
-                f.write(",".join(HEADER) + "\n")
+        # # Create CSV if it doesn't exist. We will append it every epoch.
+        # HEADER = ["epoch", "input", "loop", "dataset", "config_idx", "fusion_idx", "loss"]
+        # if not out_csv_path.exists():
+        #     out_csv_path.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
+        #     with open(out_csv_path, mode="w") as f:
+        #         f.write(",".join(HEADER) + "\n")
 
         self.save_hyperparameters()
 
@@ -122,20 +123,23 @@ class Model(pl.LightningModule):
             torch.optim.AdamW(
                 params=self.models[i].parameters(),
                 lr=self.train_args.default_lr,
-                weight_decay=self.train_args.default_weight_decay
+                weight_decay=self.train_args.default_weight_decay,
             )
             for i in range(self.num_models)
         ]
         return optimizers
 
-
     def on_train_epoch_start(self) -> None:
-        self.sum_train_losses = [torch.tensor(0.) for _ in range(self.num_models)]
-        self.sum_val_losses = [torch.tensor(0.) for _ in range(self.num_models)]
-        self.num_train_losses = [torch.tensor(0.) for _ in range(self.num_models)]
-        self.num_val_losses = [torch.tensor(0.) for _ in range(self.num_models)]
-        self.sum_eff_batch_train_losses = [torch.tensor(0.) for _ in range(self.num_models)]
-        self.sum_eff_batch_val_losses = [torch.tensor(0.) for _ in range(self.num_models)]
+        self.sum_train_losses = [torch.tensor(0.0) for _ in range(self.num_models)]
+        self.sum_val_losses = [torch.tensor(0.0) for _ in range(self.num_models)]
+        self.num_train_losses = [torch.tensor(0.0) for _ in range(self.num_models)]
+        self.num_val_losses = [torch.tensor(0.0) for _ in range(self.num_models)]
+        self.sum_eff_batch_train_losses = [
+            torch.tensor(0.0) for _ in range(self.num_models)
+        ]
+        self.sum_eff_batch_val_losses = [
+            torch.tensor(0.0) for _ in range(self.num_models)
+        ]
         # self.train_losses = [[] for _ in range(self.num_models)]
         # self.val_losses = [[] for _ in range(self.num_models)]
         self.subset_batch_idx = None
@@ -148,11 +152,19 @@ class Model(pl.LightningModule):
             ds_train: CsvDataset = dl_train.dataset.datasets
         ds_val: CsvDataset = self.trainer.val_dataloaders[0].dataset
 
-        ds_val.on_epoch_start() # Required by CsvDataset
+        ds_val.on_epoch_start()  # Required by CsvDataset
         if ds_train is not None:
-            ds_train.on_epoch_start() # Required by CsvDataset
+            ds_train.on_epoch_start()  # Required by CsvDataset
 
-    def _forward_loss(self, model_idx, features, labels, backward: bool = False, opt_step: bool = False, no_grad = False):
+    def _forward_loss(
+        self,
+        model_idx,
+        features,
+        labels,
+        backward: bool = False,
+        opt_step: bool = False,
+        no_grad=False,
+    ):
         if no_grad:
             with torch.no_grad():
                 out = self.models[model_idx].forward(features)
@@ -192,7 +204,7 @@ class Model(pl.LightningModule):
         # Is this the end of an effective batch? (gradient accumulation, logging)
         _opt_step = (batch_idx + 1) % self.grad_accum == 0
         if subset_emitted:
-            _opt_step_subset = (self.subset_batch_idx + 1) % self.grad_accum == 0 
+            _opt_step_subset = (self.subset_batch_idx + 1) % self.grad_accum == 0
         else:
             _opt_step_subset = False
         _opt_step_per_ds_idx = [_opt_step, _opt_step_subset]
@@ -206,13 +218,12 @@ class Model(pl.LightningModule):
                 A = self.num_ds
                 B = self.num_fusions
                 C = self.num_configs
-                ds_idx = (idx % (A*B*C)) // (B*C)
-                fusion_idx = (idx % (B*C)) // C
+                ds_idx = (idx % (A * B * C)) // (B * C)
+                fusion_idx = (idx % (B * C)) // C
                 config_idx = idx % C
 
                 if ds_idx == 1 and not subset_emitted:
                     continue
-
 
                 # Warmup implementation, scale lr down with factor derived from
                 # linear warmup. Based on:
@@ -225,28 +236,29 @@ class Model(pl.LightningModule):
                     lr_scale = float(cur_steps + 1) / warmup_steps
                     _lr *= lr_scale
                     for pg in self.optimizers()[idx].param_groups:
-                        pg['lr'] = _lr
+                        pg["lr"] = _lr
 
                 # Forward, backward, optimize (when effective batch is complete = grad_accum)
                 _features = xlsr_states_per_ds[ds_idx]
                 _labels = labels_per_ds[ds_idx]
                 _step = _opt_step_per_ds_idx[ds_idx]
-                self._forward_loss(idx, _features, _labels, backward=True, opt_step=_step)
+                self._forward_loss(
+                    idx, _features, _labels, backward=True, opt_step=_step
+                )
                 _loss_detach = self.models[idx].last_loss.detach().cpu()
                 self.sum_train_losses[idx] += _loss_detach
-                self.num_train_losses[idx] += 1.
+                self.num_train_losses[idx] += 1.0
                 self.sum_eff_batch_train_losses[idx] += _loss_detach
 
                 # Logging (on effective batch).
                 if _step:
                     indices_str = f"ds{ds_idx}_fusion{fusion_idx}_cfg{config_idx}"
                     _eff_loss = self.sum_eff_batch_train_losses[idx] / self.grad_accum
-                    self.sum_eff_batch_train_losses[idx].fill_(0.)
+                    self.sum_eff_batch_train_losses[idx].fill_(0.0)
                     self.log(f"train_loss_{indices_str}", _eff_loss)
                     if idx == 0:
                         self.log("lr", torch.tensor(_lr))
                         self.log("eff_step", torch.tensor(cur_steps))
-
 
         torch.cuda.synchronize(self.device)
 
@@ -254,8 +266,6 @@ class Model(pl.LightningModule):
             self.full_global_step += 1
         if _opt_step_subset:
             self.subset_global_step += 1
-
-
 
         # losses = torch.zeros((self.num_models,), requires_grad=False)
         # for i in range(self.num_models):
@@ -282,9 +292,7 @@ class Model(pl.LightningModule):
         #             self.log("lr", torch.tensor(_lr))
         #             self.log("eff_step", torch.tensor(cur_steps))
 
-
         # print("done")
-
 
     def on_train_epoch_end(self) -> None:
         _mean_loss_per_model = [
@@ -300,8 +308,8 @@ class Model(pl.LightningModule):
                 A = self.num_ds
                 B = self.num_fusions
                 C = self.num_configs
-                ds_idx = (idx % (A*B*C)) // (B*C)
-                fusion_idx = (idx % (B*C)) // C
+                ds_idx = (idx % (A * B * C)) // (B * C)
+                fusion_idx = (idx % (B * C)) // C
                 config_idx = idx % C
 
                 _epoch = "%i" % self.current_epoch
@@ -315,7 +323,6 @@ class Model(pl.LightningModule):
                 _loss = "%0.8f" % _mean_loss_per_model[idx].item()
                 row = [_epoch, _input, _loop, _ds, _config_idx, _fusion_idx, _loss]
                 f.write(",".join(row) + "\n")
-
 
     def validation_step(self, val_batch, batch_idx):
         features, labels, subset_emitted = val_batch
@@ -335,11 +342,10 @@ class Model(pl.LightningModule):
         # Is this the end of an effective batch? (gradient accumulation, logging)
         _opt_step = (batch_idx + 1) % self.grad_accum == 0
         if subset_emitted:
-            _opt_step_subset = (self.subset_val_batch_idx + 1) % self.grad_accum == 0 
+            _opt_step_subset = (self.subset_val_batch_idx + 1) % self.grad_accum == 0
         else:
             _opt_step_subset = False
         _opt_step_per_ds_idx = [_opt_step, _opt_step_subset]
-
 
         # losses = torch.zeros((self.num_models,))
         torch.cuda.synchronize(self.device)
@@ -347,8 +353,8 @@ class Model(pl.LightningModule):
             A = self.num_ds
             B = self.num_fusions
             C = self.num_configs
-            ds_idx = (idx % (A*B*C)) // (B*C)
-            fusion_idx = (idx % (B*C)) // C
+            ds_idx = (idx % (A * B * C)) // (B * C)
+            fusion_idx = (idx % (B * C)) // C
             config_idx = idx % C
 
             if ds_idx == 1 and not subset_emitted:
@@ -365,7 +371,7 @@ class Model(pl.LightningModule):
 
                 _loss_detach = loss.detach().cpu()
                 self.sum_val_losses[idx] += loss.detach().cpu()
-                self.num_val_losses[idx] += 1.
+                self.num_val_losses[idx] += 1.0
                 self.sum_eff_batch_val_losses[idx] += _loss_detach
 
                 _step = _opt_step_per_ds_idx[ds_idx]
@@ -374,11 +380,10 @@ class Model(pl.LightningModule):
                 if _step and not self.trainer.sanity_checking:
                     indices_str = f"ds{ds_idx}_fusion{fusion_idx}_cfg{config_idx}"
                     _eff_loss = self.sum_eff_batch_val_losses[idx] / self.grad_accum
-                    self.sum_eff_batch_val_losses[idx].fill_(0.)
+                    self.sum_eff_batch_val_losses[idx].fill_(0.0)
                     # _eff_batch_losses = self.val_losses[-self.grad_accum:]
                     # _eff_loss = torch.stack(tuple(x[idx] for x in _eff_batch_losses)).mean()
                     self.log(f"val_loss_{indices_str}", _eff_loss)
-
 
                 # indices_str = f"ds{ds_idx}_cfg{config_idx}_lay{layer_str}"
                 # self.log(f"val_loss_{indices_str}", loss, on_step=False, on_epoch=True)
@@ -402,7 +407,6 @@ class Model(pl.LightningModule):
         ]
         _mean_loss_per_model = torch.stack(_mean_loss_per_model, dim=0)
 
-
         # _losses = torch.stack(self.val_losses, dim=0)
         # _mean_loss_per_model = _losses.mean(dim=0)
 
@@ -411,8 +415,8 @@ class Model(pl.LightningModule):
                 A = self.num_ds
                 B = self.num_fusions
                 C = self.num_configs
-                ds_idx = (idx % (A*B*C)) // (B*C)
-                fusion_idx = (idx % (B*C)) // C
+                ds_idx = (idx % (A * B * C)) // (B * C)
+                fusion_idx = (idx % (B * C)) // C
                 config_idx = idx % C
 
                 _epoch = "%i" % self.current_epoch
@@ -426,5 +430,3 @@ class Model(pl.LightningModule):
                 _loss = "%0.8f" % _mean_loss_per_model[idx].item()
                 row = [_epoch, _input, _loop, _ds, _config_idx, _fusion_idx, _loss]
                 f.write(",".join(row) + "\n")
-
-

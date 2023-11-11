@@ -154,8 +154,8 @@ TRAIN_ARGS = TrainConfig(
 TRAIN_ARGS_PER_XLSR_SIZE: Dict[str, TrainConfig] = {
     "wav2vec2-xls-r-300m": TrainConfig(
         max_epochs=TRAIN_ARGS.max_epochs,
-        batch_size=3, # effective batch size 60 -> 24 GB VRAM
-        grad_accum=20,
+        batch_size=1, # effective batch size 60 -> 24 GB VRAM
+        grad_accum=60,
         default_lr=TRAIN_ARGS.default_lr,
         default_warmup_steps=TRAIN_ARGS.default_warmup_steps,
         default_weight_decay=TRAIN_ARGS.default_weight_decay,

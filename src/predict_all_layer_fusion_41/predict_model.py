@@ -121,6 +121,29 @@ def _predict_models(split: Split, cpus: int):
     N_300m = len(models_300m[0])
     N_1b = len(models_1b[0])
     N_2b = len(models_2b[0])
+
+    _root = "/home/luna.kuleuven.be/u0131128/GitHub/btamm12/conferencing-speech-2022/src/predict_all_layer_fusion_41/_best_models_for_hosting.v2/"
+    torch.save(models_mfcc[0].state_dict(), _root + "model_mfcc_full.pt")
+    torch.save(models_mfcc[1].state_dict(), _root + "model_mfcc_subset.pt")
+    # torch.save(models_300m[0][0].state_dict(), _root + "model_300m_lay5_full.pt")
+    # torch.save(models_300m[0][1].state_dict(), _root + "model_300m_lay21_full.pt")
+    # torch.save(models_300m[0][2].state_dict(), _root + "model_300m_fusion_full.pt")
+    # torch.save(models_300m[1][0].state_dict(), _root + "model_300m_lay5_subset.pt")
+    # torch.save(models_300m[1][1].state_dict(), _root + "model_300m_lay21_subset.pt")
+    # torch.save(models_300m[1][2].state_dict(), _root + "model_300m_fusion_subset.pt")
+    # torch.save(models_1b[0][0].state_dict(), _root + "model_1b_lay10_full.pt")
+    # torch.save(models_1b[0][1].state_dict(), _root + "model_1b_lay41_full.pt")
+    # torch.save(models_1b[0][2].state_dict(), _root + "model_1b_fusion_full.pt")
+    # torch.save(models_1b[1][0].state_dict(), _root + "model_1b_lay10_subset.pt")
+    # torch.save(models_1b[1][1].state_dict(), _root + "model_1b_lay41_subset.pt")
+    # torch.save(models_1b[1][2].state_dict(), _root + "model_1b_fusion_subset.pt")
+    # torch.save(models_2b[0][0].state_dict(), _root + "model_2b_lay10_full.pt")
+    # torch.save(models_2b[0][1].state_dict(), _root + "model_2b_lay41_full.pt")
+    # torch.save(models_2b[0][2].state_dict(), _root + "model_2b_fusion_full.pt")
+    # torch.save(models_2b[1][0].state_dict(), _root + "model_2b_lay10_subset.pt")
+    # torch.save(models_2b[1][1].state_dict(), _root + "model_2b_lay41_subset.pt")
+    # torch.save(models_2b[1][2].state_dict(), _root + "model_2b_fusion_subset.pt")
+    
     for d in range(2):
         models_mfcc[d] = models_mfcc[d].to(device)
         for i in range(N_300m):
@@ -129,6 +152,7 @@ def _predict_models(split: Split, cpus: int):
             models_1b[d][i] = models_1b[d][i].to(device)
         for i in range(N_2b):
             models_2b[d][i] = models_2b[d][i].to(device)
+
 
     # Create dataloader.
     csv_dataset = CsvDataset(split)
